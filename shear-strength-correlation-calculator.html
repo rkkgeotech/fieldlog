@@ -1267,7 +1267,14 @@ function buildClassPlot(pts, cls, useElev, yLo, yHi, titlePrefix) {
   const { s: grid, sx, sy, PH } = makeSvgBase(VW, VH, ML, MR, MT, MB, xMax, yLo, yHi, useElev, xfmt);
   let data = '';
   // connecting line (segment colored by "from" point's stratum)
+  // Skip segment if any opposite-class point lies between the two endpoints in depth,
+  // indicating a soil-type interruption — leave a visible gap instead.
+  const otherCls = cls==='coarse' ? 'fine' : 'coarse';
   for (let i=1;i<cp.length;i++){
+    const y0 = Math.min(cp[i-1].yVal, cp[i].yVal);
+    const y1 = Math.max(cp[i-1].yVal, cp[i].yVal);
+    const interrupted = pts.some(p => p.cls===otherCls && p.yVal > y0 && p.yVal < y1);
+    if (interrupted) continue;
     const segCol = cp[i-1].sc ? cp[i-1].sc.br : col.line;
     data += `<line x1="${sx(cp[i-1].val)}" y1="${sy(cp[i-1].yVal)}" x2="${sx(cp[i].val)}" y2="${sy(cp[i].yVal)}" stroke="${segCol}" stroke-width="2" opacity="0.75"/>`;
   }
@@ -1410,7 +1417,12 @@ function buildSummaryPlot(allSamples) {
     let data='';
     borGroups.forEach(g=>{
       const cp = g.pts.filter(p=>p.cls===cls);
+      const otherClsS = cls==='coarse' ? 'fine' : 'coarse';
       for (let i=1;i<cp.length;i++){
+        const y0 = Math.min(cp[i-1].yVal, cp[i].yVal);
+        const y1 = Math.max(cp[i-1].yVal, cp[i].yVal);
+        const interrupted = g.pts.some(p => p.cls===otherClsS && p.yVal > y0 && p.yVal < y1);
+        if (interrupted) continue;
         data += `<line x1="${sx(cp[i-1].val)}" y1="${sy(cp[i-1].yVal)}" x2="${sx(cp[i].val)}" y2="${sy(cp[i].yVal)}" stroke="${cp[i-1].sc.br}" stroke-width="2" opacity="0.85" stroke-dasharray="${g.dash}"/>`;
       }
       cp.forEach(p=>{
