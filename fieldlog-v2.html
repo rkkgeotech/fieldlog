@@ -544,6 +544,18 @@ const CONSIST_FINE   = ['','Very Soft','Soft','Medium Stiff','Stiff','Very Stiff
 const COARSE_MODS = ['','Coarse','Coarse to Fine','Coarse to Medium','Medium','Medium to Fine','Fine',
                      'Coarse to Fine Sub-Rounded','Coarse to Fine Sub-Angular','Fine to Coarse'];
 const FINE_MODS   = ['','Low Plasticity','Medium Plasticity','High Plasticity'];
+
+// Combined descriptor list used for all three constituent dropdowns
+function buildDescSelect(sel) {
+  let h = '<option value="">— Select —</option>';
+  h += '<optgroup label="Grain Size">';
+  COARSE_MODS.filter(o => o).forEach(o => { h += `<option${sel===o?' selected':''}>${o}</option>`; });
+  h += '</optgroup>';
+  h += '<optgroup label="Plasticity">';
+  FINE_MODS.filter(o => o).forEach(o => { h += `<option${sel===o?' selected':''}>${o}</option>`; });
+  h += '</optgroup>';
+  return h;
+}
 const PARTICLES   = ['','Gravel','Sand','Silt','Clay','Gravel-Sized Rock Fragments',
                      'Cobbles','Organics','Root Fragments'];
 const PROPS       = ['','And (36-50%)','Some (21-35%)','Little (11-20%)','Trace (1-10%)'];
@@ -1109,18 +1121,10 @@ function updLith(id, field, val) {
     l[field] = val;
     if (field === 'uscs') {
       const fine = isFineUSCS(val);
-      // Update density/consistency dropdown
+      // Update density/consistency dropdown only
       const dc = document.getElementById(`dc-${id}`);
       if (dc) dc.innerHTML = (fine ? CONSIST_FINE : DENSITY_COARSE)
         .map(o => `<option${l.densityConsist===o?' selected':''}>${o}</option>`).join('');
-      // Update primary constituent descriptor dropdown
-      const c1 = document.getElementById(`c1desc-${id}`);
-      if (c1) c1.innerHTML = buildSelect(fine ? FINE_MODS : COARSE_MODS, l.c1desc);
-      // Update secondary and tertiary descriptor dropdowns too
-      const c2 = document.getElementById(`c2desc-${id}`);
-      if (c2) c2.innerHTML = buildSelect(fine ? FINE_MODS : COARSE_MODS, l.c2desc);
-      const c3 = document.getElementById(`c3desc-${id}`);
-      if (c3) c3.innerHTML = buildSelect(fine ? FINE_MODS : COARSE_MODS, l.c3desc);
     }
   }
 }
@@ -1215,7 +1219,7 @@ function renderLith() {
           <div class="field">
             <label>Descriptor</label>
             <select id="c1desc-${l.id}" onchange="updLith(${l.id},'c1desc',this.value)">
-              ${buildSelect(isFineUSCS(l.uscs) ? FINE_MODS : COARSE_MODS, l.c1desc)}
+              ${buildDescSelect(l.c1desc)}
             </select>
           </div>
           <div class="field">
@@ -1237,7 +1241,7 @@ function renderLith() {
           <div class="field">
             <label>Descriptor</label>
             <select id="c2desc-${l.id}" onchange="updLith(${l.id},'c2desc',this.value)">
-              ${buildSelect(isFineUSCS(l.uscs) ? FINE_MODS : COARSE_MODS, l.c2desc)}
+              ${buildDescSelect(l.c2desc)}
             </select>
           </div>
           <div class="field">
@@ -1259,7 +1263,7 @@ function renderLith() {
           <div class="field">
             <label>Descriptor</label>
             <select id="c3desc-${l.id}" onchange="updLith(${l.id},'c3desc',this.value)">
-              ${buildSelect(isFineUSCS(l.uscs) ? FINE_MODS : COARSE_MODS, l.c3desc)}
+              ${buildDescSelect(l.c3desc)}
             </select>
           </div>
           <div class="field">
