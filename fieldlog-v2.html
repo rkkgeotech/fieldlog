@@ -330,6 +330,7 @@ header {
     <button class="btn btn-ghost btn-sm" onclick="switchTabById('tab-boring')" style="background:rgba(255,255,255,.15);color:white;border-color:rgba(255,255,255,.3)">+ Boring</button>
     <button class="btn btn-ghost btn-sm" onclick="exportGINT()" style="background:rgba(255,255,255,.15);color:white;border-color:rgba(255,255,255,.3)">gINT</button>
     <button class="btn btn-ghost btn-sm" onclick="saveJSON()" style="background:rgba(255,255,255,.15);color:white;border-color:rgba(255,255,255,.3)">&#8659; JSON</button>
+    <button class="btn btn-ghost btn-sm" onclick="loadJSON()" style="background:rgba(255,255,255,.15);color:white;border-color:rgba(255,255,255,.3)">&#8657; JSON</button>
   </div>
 </header>
 
@@ -340,6 +341,7 @@ header {
   <div class="tab" data-section="tab-lith" onclick="switchTab(this)">Lithology</div>
   <div class="tab" data-section="tab-gw" onclick="switchTab(this)">Groundwater</div>
   <div class="tab" data-section="tab-rock" onclick="switchTab(this)">Rock Coring</div>
+  <div class="tab" data-section="tab-notes" onclick="switchTab(this)">Notes</div>
   <div class="tab" data-section="tab-saved" onclick="switchTab(this)">Saved</div>
 </div>
 
@@ -451,7 +453,14 @@ header {
 </div>
 
 <!-- ════════════════════════════════════ -->
-<!--  TAB: SAVED LOGS                    -->
+<!--  TAB: NOTES                         -->
+<!-- ════════════════════════════════════ -->
+<div id="tab-notes" class="section">
+  <div id="notes-list"></div>
+  <button class="btn btn-outline btn-full" onclick="addNote()">+ Add Note</button>
+</div>
+
+<!-- ════════════════════════════════════ -->
 <!-- ════════════════════════════════════ -->
 <div id="tab-saved" class="section">
   <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
@@ -494,7 +503,7 @@ function newBoring(id) {
     hamWt:140, hamDrop:30, hamCal:'', coreMethod:'', coreDia:'',
     lat:'', lon:'', north:'', east:'', coordSys:'MD State Plane', elev:'', notes:'',
     sptIntervals:'3',
-    spt:[], lith:[], gw:[], rock:[]
+    spt:[], lith:[], gw:[], rock:[], notes:[]
   };
 }
 
@@ -681,7 +690,7 @@ function saveBoring(id) {
     coreMethod:gv('core-method'), coreDia: gv('core-dia'),
     north:     gv('north'), east: gv('east'), coordSys: gv('coord-sys'),
     lat:       gv('lat'), lon: gv('lon'), elev: gv('elev'),
-    holeDepth: gv('hole-depth'), complete: gv('complete-date'), notes: gv('notes'),
+    holeDepth: gv('hole-depth'), complete: gv('complete-date'), boringNotes: gv('boring-notes'),
     sptIntervals: gv('spt-intervals')
   });
   // Update active boring if this is the one
@@ -848,7 +857,7 @@ function renderBoringCards() {
             <input type="date" id="${pfx}complete-date" value="${b.complete}"></div>
         </div>
         <div class="field"><label>Boring Notes</label>
-          <textarea id="${pfx}notes" placeholder="General observations, installation, grout details…">${b.notes}</textarea></div>
+          <textarea id="${pfx}boring-notes" placeholder="General observations, installation, grout details…">${b.boringNotes||''}</textarea></div>
 
         <div style="display:flex;gap:8px;margin-top:12px">
           <button class="btn btn-primary" style="flex:1" onclick="saveBoring('${b.id}')">Save Boring</button>
@@ -1084,12 +1093,9 @@ function renderSPT() {
         <div class="rec-pct" id="rpct-${r.id}">${recPct(r)}% recovery</div>
         ` : ''}
 
-        <div class="field" style="margin-top:10px">
-          <label>Notes</label>
-          <textarea placeholder="Sample quality, odor, condition…" oninput="updSPT(${r.id},'notes',this.value)">${r.notes}</textarea>
-        </div>
 
-        <div style="margin-top:10px;display:flex;gap:8px">
+        <div style="margin-top:10px;display:flex;gap:8px;justify-content:space-between">
+          <button class="btn btn-primary btn-sm" onclick="saveSPTEntry(${r.id})">Save</button>
           <button class="btn btn-danger btn-sm" onclick="delSPT(${r.id})">Delete</button>
         </div>
       </div>
@@ -1109,6 +1115,83 @@ function updN(id) {
   const nb = document.getElementById('nb-'+id);
   if (nd) nd.textContent = n;
   if (nb) nb.textContent = 'N='+n;
+}
+function saveSPTEntry(id) { renderSPT(); showToast('Sample saved','success'); }
+function saveLithEntry(id) { renderLith(); showToast('Stratum saved','success'); }
+function saveGWEntry(id)  { renderGW();  showToast('Reading saved','success'); }
+function saveRockEntry(id){ renderRock(); showToast('Core run saved','success'); }
+
+// ── NOTES ────────────────────────────────────────────────────────
+let noteId = 0;
+function addNote() {
+  if (!requireBoring()) return;
+  const id = ++noteId;
+  const now = new Date();
+  const ts = now.toLocaleString('en-US', {
+    month:'2-digit', day:'2-digit', year:'numeric',
+    hour:'numeric', minute:'2-digit', second:'2-digit', hour12:true
+  });
+  if (!Array.isArray(ab().notes)) ab().notes = [];
+  ab().notes.push({ id, depth:'', text:'', timestamp: ts });
+  renderNotes();
+  setTimeout(() => {
+    const card = document.getElementById(`note-${id}`);
+    if (card) { card.classList.add('expanded'); card.scrollIntoView({behavior:'smooth',block:'center'}); }
+  }, 50);
+  updateStatusBar();
+}
+
+function delNote(id) {
+  if (!ab()) return;
+  ab().notes = (ab().notes||[]).filter(n => n.id !== id);
+  renderNotes(); updateStatusBar();
+}
+
+function updNote(id, field, val) {
+  const n = (ab()?.notes||[]).find(n => n.id === id);
+  if (n) n[field] = val;
+}
+
+function saveNoteEntry(id) { renderNotes(); showToast('Note saved','success'); }
+
+function renderNotes() {
+  const el = document.getElementById('notes-list');
+  const b = ab();
+  const notes = Array.isArray(b?.notes) ? b.notes : [];
+  if (!b || !notes.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">📝</div><div class="empty-text">No notes — tap Add Note</div></div>`;
+    return;
+  }
+  el.innerHTML = notes.map(n => `
+    <div class="entry-card" id="note-${n.id}">
+      <div class="entry-header" onclick="toggleEntry('note-${n.id}')">
+        <div>
+          <div class="entry-depth">${n.depth ? n.depth + ' ft' : 'No depth'}</div>
+          <div class="entry-meta">${n.timestamp}${n.text ? ' · ' + n.text.substring(0,40) + (n.text.length>40?'…':'') : ''}</div>
+        </div>
+        <span class="entry-chevron">›</span>
+      </div>
+      <div class="entry-body">
+        <div class="field">
+          <label>Depth (ft)</label>
+          <input type="number" step="0.1" value="${n.depth}" placeholder="e.g. 14.5"
+            oninput="updNote(${n.id},'depth',this.value)">
+        </div>
+        <div class="field">
+          <label>Note</label>
+          <textarea placeholder="Field observation, equipment issue, condition change…"
+            oninput="updNote(${n.id},'text',this.value)">${n.text}</textarea>
+        </div>
+        <div class="field">
+          <label style="color:var(--muted)">Timestamp</label>
+          <div style="font-family:var(--mono);font-size:13px;color:var(--muted);padding:6px 0">${n.timestamp}</div>
+        </div>
+        <div style="margin-top:10px;display:flex;gap:8px;justify-content:space-between">
+          <button class="btn btn-primary btn-sm" onclick="saveNoteEntry(${n.id})">Save</button>
+          <button class="btn btn-danger btn-sm" onclick="delNote(${n.id})">Delete</button>
+        </div>
+      </div>
+    </div>`).join('');
 }
 function updBot(id) {
   const r = ab()?.spt.find(r => r.id === id);
@@ -1166,6 +1249,17 @@ function updLith(id, field, val) {
 }
 
 function buildDCOptions(uscs, sel) {
+  if (!uscs) {
+    // No USCS — show both lists grouped so the user can pick the right one
+    let h = '<option value="">— Select —</option>';
+    h += '<optgroup label="Density (Coarse-Grained)">';
+    DENSITY_COARSE.filter(o => o).forEach(o => { h += `<option${sel===o?' selected':''}>${o}</option>`; });
+    h += '</optgroup>';
+    h += '<optgroup label="Consistency (Fine-Grained)">';
+    CONSIST_FINE.filter(o => o).forEach(o => { h += `<option${sel===o?' selected':''}>${o}</option>`; });
+    h += '</optgroup>';
+    return h;
+  }
   const fine = isFineUSCS(uscs);
   return (fine ? CONSIST_FINE : DENSITY_COARSE)
     .map(o => `<option${sel===o?' selected':''}>${o}</option>`).join('');
@@ -1313,7 +1407,8 @@ function renderLith() {
           <label>Other / Comments</label>
           <textarea placeholder="e.g. Residual Soil, Contains Root Fragments…" oninput="updLith(${l.id},'other',this.value)">${l.other}</textarea>
         </div>
-        <div style="margin-top:10px;display:flex;gap:8px">
+        <div style="margin-top:10px;display:flex;gap:8px;justify-content:space-between">
+          <button class="btn btn-primary btn-sm" onclick="saveLithEntry(${l.id})">Save</button>
           <button class="btn btn-danger btn-sm" onclick="delLith(${l.id})">Delete</button>
         </div>
       </div>
@@ -1389,11 +1484,8 @@ function renderGW() {
           <label>Timestamp</label>
           <input type="datetime-local" value="${g.timestamp}" onchange="updGW(${g.id},'timestamp',this.value)">
         </div>
-        <div class="field">
-          <label>Observations</label>
-          <textarea placeholder="Caving, lost circulation, seepage notes…" oninput="updGW(${g.id},'notes',this.value)">${g.notes}</textarea>
-        </div>
-        <div style="margin-top:10px;display:flex;gap:8px">
+        <div style="margin-top:10px;display:flex;gap:8px;justify-content:space-between">
+          <button class="btn btn-primary btn-sm" onclick="saveGWEntry(${g.id})">Save</button>
           <button class="btn btn-danger btn-sm" onclick="delGW(${g.id})">Delete</button>
         </div>
       </div>
@@ -1576,11 +1668,8 @@ function renderRock() {
             </select>
           </div>
         </div>
-        <div class="field">
-          <label>Core Run Notes</label>
-          <textarea placeholder="Fracture zone, drilling conditions, additional observations…" oninput="updRock(${r.id},'notes',this.value)">${r.notes}</textarea>
-        </div>
-        <div style="margin-top:10px;display:flex;gap:8px">
+        <div style="margin-top:10px;display:flex;gap:8px;justify-content:space-between">
+          <button class="btn btn-primary btn-sm" onclick="saveRockEntry(${r.id})">Save</button>
           <button class="btn btn-danger btn-sm" onclick="delRock(${r.id})">Delete</button>
         </div>
       </div>
@@ -1591,7 +1680,7 @@ function renderRock() {
 // ── RENDER ALL ───────────────────────────────────────────────────
 function renderAll() {
   renderBoringCards();
-  renderSPT(); renderLith(); renderGW(); renderRock();
+  renderSPT(); renderLith(); renderGW(); renderRock(); renderNotes();
   renderBoringSelect();
 }
 
@@ -1602,25 +1691,40 @@ function exportGINT() {
 
   const wb = XLSX.utils.book_new();
 
+  // Strip " (xx-xx%)" range text from proportion labels
+  function sp(v) { return (v||'').replace(/\s*\([^)]*\)/g,''); }
+
+  // Build Manual Override description from rock core run fields
+  function rockDesc(r) {
+    const p = [];
+    if (r.weathering)   p.push(r.weathering + ' Weathered');
+    if (r.color)        p.push(r.color);
+    if (r.rockType)     p.push(r.rockType.toUpperCase());
+    if (r.hardness)     p.push(r.hardness);
+    if (r.fracFreq)     p.push(r.fracFreq);
+    if (r.jointSpacing) p.push(r.jointSpacing + ' Fracture Spacing');
+    if (r.notes)        p.push(r.notes);
+    return p.join(', ');
+  }
+
   // ── PROJECT sheet ──
   const projRows = [
-    ['Project Info','Project Info','Project Info','Project Info','Project Info','Assumed','Assumed'],
-    ['Project Name','Client','RKK Commission Number','State','County or Locale','Input_Units','Output_Units'],
+    ['Project Name','Client','RKK Commission Number','State','County or Locale','Input_Units','Output_Units','Depth_Log_Page','Draft','GintUpdated'],
     [state.project.name, state.project.client, state.project.num,
      state.project.state, state.project.county,
-     state.project.units, state.project.units]
+     state.project.units, state.project.units,
+     '','','']
   ];
   const wsPROJ = XLSX.utils.aoa_to_sheet(projRows);
   XLSX.utils.book_append_sheet(wb, wsPROJ, 'PROJECT');
 
   // ── POINT sheet ──
-  const ptHdr1 = ['Boring Info','Boring Info','','Boring Info','Boring Info','','','','','Boring Info','Boring Info','Boring Info','','','Boring Info','Boring Info','Boring Info','Boring Info','Boring Info','Boring Info','Boring Info','Boring Info','','','','Rock Coring','Rock Coring','','Groundwater','Groundwater','Groundwater','Groundwater','Groundwater','Groundwater','Groundwater','Groundwater','Groundwater'];
-  const ptHdr2 = ['PointID','HoleDepth','Location','Start','Complete','Baseline','Station','Offset Distance','Offset Direction','North','East','Coordinate System','Latitude','Longitude','Elevation','Inspector','Drilling Company','Driller','Rig','Advancement Method','Soil Sampler Inner Diameter','SPT Hammer Type','HamCalDate','SPT Hammer Weight','SPT Hammer Fall','Rock Coring Method','Rock Core Diameter','Notes','GW 1 Date and Time','GW 1 Depth','GW 1 Cave','GW 2 Date and Time','GW 2 Depth','GW 2 Cave','GW 3 Date and Time','GW 3 Depth','GW 3 Cave'];
-  const ptRows = [ptHdr1, ptHdr2];
+  const ptHdr = ['PointID','HoleDepth','Location','Start','Complete','Baseline','Station','Offset Distance','Offset Direction','North','East','Coordinate System','Latitude','Longitude','Elevation','Inspector','Drilling Company','Driller','Rig','Advancement Method','Soil Sampler Inner Diameter','SPT Hammer Type','HamCalDate','SPT Hammer Weight','SPT Hammer Fall','Rock Coring Method','Rock Core Diameter','Notes','GW 1 Date and Time','GW 1 Depth','GW 1 Cave','GW 2 Date and Time','GW 2 Depth','GW 2 Cave','GW 3 Date and Time','GW 3 Depth','GW 3 Cave','Depth_Log_Page','Plunge','Photos','GintUpdated'];
+  const ptRows = [ptHdr];
 
   state.borings.forEach(b => {
     const gwArr = b.gw || [];
-    const row = [
+    ptRows.push([
       b.id, b.holeDepth, b.loc,
       b.start ? excelDate(b.start) : '',
       b.complete ? excelDate(b.complete) : '',
@@ -1629,46 +1733,63 @@ function exportGINT() {
       b.inspector, b.co, b.driller, b.rig, b.method,
       b.samplerID, b.hammer, b.hamCal ? excelDate(b.hamCal) : '',
       b.hamWt, b.hamDrop,
-      b.coreMethod, b.coreDia, b.notes,
+      b.coreMethod, b.coreDia, b.boringNotes||'',
       gwArr[0]?.timestamp ? excelDate(gwArr[0].timestamp) : '',
       gwArr[0]?.depth||'', gwArr[0]?.cave||'',
       gwArr[1]?.timestamp ? excelDate(gwArr[1].timestamp) : '',
       gwArr[1]?.depth||'', gwArr[1]?.cave||'',
       gwArr[2]?.timestamp ? excelDate(gwArr[2].timestamp) : '',
-      gwArr[2]?.depth||'', gwArr[2]?.cave||''
-    ];
-    ptRows.push(row);
+      gwArr[2]?.depth||'', gwArr[2]?.cave||'',
+      '','','',''
+    ]);
   });
   const wsPOINT = XLSX.utils.aoa_to_sheet(ptRows);
   XLSX.utils.book_append_sheet(wb, wsPOINT, 'POINT');
 
   // ── LITHOLOGY sheet ──
-  const liHdr1 = ['','Lithology','','Lithology','','','Lithology','Lithology','Lithology','Lithology','Lithology','Lithology','Lithology','Lithology','Lithology','Lithology','Lithology','Lithology','Lithology','','Lithology'];
-  const liHdr2 = ['PointID','Depth','Bottom','Line_Type','Stratum','Moisture','Density / Consistency','Color','Constituent 1: Descriptor','Constituent 1: Particle','Constituent 2: Percentage','Constituent 2: Descriptor','Constituent 2: Particle','Constituent 3: Percentage','Constituent 3: Descriptor','Constituent 3: Particle','Other','USCS','AASHTO','Lab-Tested?','Graphic','Manual Override'];
-  const liRows = [liHdr1, liHdr2];
+  const liHdr = ['PointID','Depth','Bottom','Line_Type','Stratum','Moisture','Density / Consistency','Color','Constituent 1: Descriptor','Constituent 1: Particle','Constituent 2: Percentage','Constituent 2: Descriptor','Constituent 2: Particle','Constituent 3: Percentage','Constituent 3: Descriptor','Constituent 3: Particle','Other','USCS','AASHTO','Lab-Tested?','Graphic','Manual Override','GintUpdated'];
+  const liRows = [liHdr];
   state.borings.forEach(b => {
     (b.lith||[]).forEach(l => {
       liRows.push([
         b.id, l.topDepth, l.botDepth, l.lineType, l.stratum,
         l.moisture, l.densityConsist, l.color,
         l.c1desc, l.c1part,
-        l.c2pct, l.c2desc, l.c2part,
-        l.c3pct, l.c3desc, l.c3part,
-        l.other, l.uscs, l.aashto, 0, l.uscs, ''
+        sp(l.c2pct), l.c2desc, l.c2part,
+        sp(l.c3pct), l.c3desc, l.c3part,
+        l.other, l.uscs, l.aashto, 0, l.uscs, '', ''
+      ]);
+    });
+    // Rock core runs → lithology entries with run descriptions
+    (b.rock||[]).forEach(r => {
+      liRows.push([
+        b.id, r.topDepth, rockBottom(r), 'Solid', '',
+        '','', r.color||'',
+        '','','','','','','','',
+        '','','', 0, '', rockDesc(r), ''
       ]);
     });
   });
   const wsLITH = XLSX.utils.aoa_to_sheet(liRows);
   XLSX.utils.book_append_sheet(wb, wsLITH, 'LITHOLOGY');
 
+  // ── NOTES sheet ──
+  const ntHdr = ['PointID','Depth','Notes','GintUpdated'];
+  const ntRows = [ntHdr];
+  state.borings.forEach(b => {
+    (Array.isArray(b.notes) ? b.notes : []).forEach(n => {
+      ntRows.push([ b.id, n.depth||'', n.text||'', n.timestamp||'' ]);
+    });
+  });
+  const wsNOTES = XLSX.utils.aoa_to_sheet(ntRows);
+  XLSX.utils.book_append_sheet(wb, wsNOTES, 'NOTES');
+
   // ── SAMPLE sheet ──
-  const smHdr1 = ['','SPT Runs','SPT Runs','SPT Runs','SPT Runs','','SPT Runs','SPT Runs','SPT Runs','SPT Runs','','','SPT Runs'];
-  const smHdr2 = ['PointID','Depth','Sample Type','Sample No','Length','Hide Symbol','Blows_1st','Blows_2nd','Blows_3rd','Blows_4th','SPTN Calculated','SPTN Override','Recovery','RQD','NMC','LL','PL','Fines','Lab USCS','Lab AASHTO','GroupIndex','Total Unit Weight','OMC','MDD','CBR','UCS','PLT','StrTestType','C','Phi','e0','Pc','Cc','Cr','pH','Minimum Resistivity','Chloride Content','Sulfate Content','Other Test and Result','Hide Result','Photos','Depth Override'];
-  const smRows = [smHdr1, smHdr2];
+  const smHdr = ['PointID','Depth','Sample Type','Sample No','Length','Hide Symbol','Blows_1st','Blows_2nd','Blows_3rd','Blows_4th','SPTN Calculated','SPTN Override','Recovery','RQD','NMC','LL','PL','Fines','Lab USCS','Lab AASHTO','GroupIndex','Total Unit Weight','OMC','MDD','CBR','UCS','PLT','StrTestType','C','Phi','e0','Pc','Cc','Cr','pH','Minimum Resistivity','Chloride Content','Sulfate Content','Other Test and Result','Hide Result','Photos','Depth Override','GintUpdated'];
+  const smRows = [smHdr];
   state.borings.forEach(b => {
     (b.spt||[]).forEach(r => {
       const n = (r.type==='S') ? calcN(r) : '';
-      const botDepth = (r.type==='B'||r.type==='G') ? r.length : calcBottom(r);
       const sampleLen = (r.type==='B'||r.type==='G')
         ? ((parseFloat(r.length)-parseFloat(r.topDepth))*12||'')
         : (r.intervalLen||r.length||24);
@@ -1681,28 +1802,22 @@ function exportGINT() {
         0,'','',''
       ]);
     });
-  });
-  const wsSAMPLE = XLSX.utils.aoa_to_sheet(smRows);
-  XLSX.utils.book_append_sheet(wb, wsSAMPLE, 'SAMPLE');
-
-  // ── ROCK CORING sheet ──
-  const rcHdr = ['PointID','Depth','Bottom','Run_No','Recovery_Length','Recovery_Pct','Recovery_Desc','RQD_Length','RQD_Pct','RQD_Desc','Color','Rock_Type','Hardness','Weathering','Fracture_Frequency','Joint_Spacing','Bedding_Foliation','Attitude','Notes'];
-  const rcRows = [rcHdr];
-  state.borings.forEach(b => {
+    // Rock core runs → Sample 'R' rows (Recovery in inches, RQD as percentage)
     (b.rock||[]).forEach(r => {
-      const recP = rockRecPct(r);
-      const rqdP = rockRqdPct(r);
-      rcRows.push([
-        b.id, r.topDepth, rockBottom(r), r.num,
-        r.recoveryLen, recP !== null ? recP/100 : '', recoveryDesc(recP),
-        r.rqdLen, rqdP !== null ? rqdP/100 : '', rqdDesc(rqdP),
-        r.color, r.rockType, r.hardness, r.weathering,
-        r.fracFreq, r.jointSpacing, r.bedding, r.attitude, r.notes
+      const runLenIn = Math.round((parseFloat(rockBottom(r)) - parseFloat(r.topDepth)) * 12);
+      const rqdVal   = rockRqdPct(r) !== null ? rockRqdPct(r) : '';
+      smRows.push([
+        b.id, r.topDepth, 'R', String(r.num), runLenIn, 0,
+        '','','','',
+        '','',
+        r.recoveryLen||'', rqdVal,
+        '','','','','','','','','','','','','','','','','','','','','','','','','',
+        0,'','',''
       ]);
     });
   });
-  const wsROCK = XLSX.utils.aoa_to_sheet(rcRows);
-  XLSX.utils.book_append_sheet(wb, wsROCK, 'ROCK_CORING');
+  const wsSAMPLE = XLSX.utils.aoa_to_sheet(smRows);
+  XLSX.utils.book_append_sheet(wb, wsSAMPLE, 'SAMPLE');
 
   // ── Write ──
   const projName = (state.project.name || 'FieldLog').replace(/[^a-zA-Z0-9_-]/g,'_');
@@ -1754,10 +1869,23 @@ function renderSaved() {
     </div>`).join('');
 }
 
+function syncCounters() {
+  // After loading state from JSON/saved log, advance all ID counters past
+  // the highest existing IDs so new entries never collide with loaded ones
+  state.borings.forEach(b => {
+    (b.spt   ||[]).forEach(r => { if (r.id > sptId)   sptId   = r.id; });
+    (b.lith  ||[]).forEach(l => { if (l.id > lithId)  lithId  = l.id; });
+    (b.gw    ||[]).forEach(g => { if (g.id > gwId)    gwId    = g.id; });
+    (b.rock  ||[]).forEach(r => { if (r.id > rockId)  rockId  = r.id; });
+    (Array.isArray(b.notes) ? b.notes : []).forEach(n => { if (n.id > noteId)  noteId  = n.id; });
+  });
+}
+
 function loadLog(id) {
   const log = savedLogs.find(l => l.id === id);
   if (!log) return;
   state = JSON.parse(JSON.stringify(log.data));
+  syncCounters();
   // restore project form
   setv('proj-name', state.project.name); setv('proj-num', state.project.num);
   setv('proj-client', state.project.client); setv('proj-state', state.project.state);
@@ -1825,8 +1953,8 @@ function updateStatusBar() {
   const b = ab();
   document.getElementById('stat-boring').textContent = b ? b.id : '—';
   document.getElementById('stat-counts').textContent = b
-    ? `${b.spt.length}S · ${b.lith.length}L · ${b.rock.length}R`
-    : '0S · 0L · 0R';
+    ? `${b.spt.length}S · ${b.lith.length}L · ${b.rock.length}R · ${(Array.isArray(b.notes)?b.notes:[]).length}N`
+    : '0S · 0L · 0R · 0N';
 }
 
 function v(id)   { return document.getElementById(id)?.value || ''; }
@@ -1860,8 +1988,11 @@ function loadJSON() {
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = '.json,application/json';
+  input.style.display = 'none';
+  document.body.appendChild(input);
   input.onchange = evt => {
     const file = evt.target.files[0];
+    document.body.removeChild(input);
     if (!file) return;
     const reader = new FileReader();
     reader.onload = e => {
@@ -1872,6 +2003,7 @@ function loadJSON() {
           return;
         }
         state = snap.state;
+        syncCounters();
         // Restore project form
         setv('proj-name', state.project.name);
         setv('proj-num', state.project.num);
