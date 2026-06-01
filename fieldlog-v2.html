@@ -387,21 +387,12 @@ header {
         <input type="text" id="proj-county" placeholder="e.g. Frederick">
       </div>
     </div>
-    <div class="grid-2">
-      <div class="field">
-        <label>Input Units</label>
-        <select id="proj-units">
-          <option value="E">English (ft, psi)</option>
-          <option value="SI">SI (m, kPa)</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>SPT Interval Default</label>
-        <select id="proj-spt-intervals">
-          <option value="3">3-Interval (seating + 2)</option>
-          <option value="4">4-Interval (seating + 3)</option>
-        </select>
-      </div>
+    <div class="field">
+      <label>Input Units</label>
+      <select id="proj-units">
+        <option value="E">English (ft, psi)</option>
+        <option value="SI">SI (m, kPa)</option>
+      </select>
     </div>
   </div>
 
@@ -420,7 +411,10 @@ header {
   <!-- List of borings -->
   <div id="boring-cards-list"></div>
 
-  <button class="btn btn-outline btn-full" onclick="promptAddBoring()">+ Add Boring</button>
+  <div style="display:flex;gap:8px;margin-top:0">
+    <button class="btn btn-outline" style="flex:1" onclick="promptAddBoring()">+ Add Boring</button>
+    <button class="btn btn-ghost" style="flex:1" onclick="promptCopyBoring()">⧉ Copy From Existing</button>
+  </div>
 
 </div>
 
@@ -499,6 +493,7 @@ function newBoring(id) {
     inspector:'', co:'', driller:'', rig:'', method:'', hammer:'', samplerID:'1.375',
     hamWt:140, hamDrop:30, hamCal:'', coreMethod:'', coreDia:'',
     lat:'', lon:'', north:'', east:'', coordSys:'MD State Plane', elev:'', notes:'',
+    sptIntervals:'3',
     spt:[], lith:[], gw:[], rock:[]
   };
 }
@@ -614,6 +609,43 @@ function promptAddBoring() {
 
 function addBoring() { promptAddBoring(); } // keep old ref working
 
+function promptCopyBoring() {
+  if (!state.borings.length) { showToast('No borings to copy from', 'warn'); return; }
+  const list = state.borings.map(b => `  ${b.id}${b.loc ? ' — ' + b.loc : ''}`).join('\n');
+  const srcId = prompt('Copy from which boring?\n\n' + list + '\n\nEnter Boring ID:');
+  if (!srcId || !srcId.trim()) return;
+  const src = state.borings.find(b => b.id === srcId.trim());
+  if (!src) { showToast('Boring "' + srcId.trim() + '" not found', 'warn'); return; }
+  const newId = prompt('Enter new Boring ID:');
+  if (!newId || !newId.trim()) return;
+  const trimmed = newId.trim();
+  if (state.borings.find(b => b.id === trimmed)) { showToast('ID "' + trimmed + '" already exists', 'warn'); return; }
+  const nb = newBoring(trimmed);
+  // Copy Inspector, Coordinate System, and all Drill Setup fields
+  nb.inspector = src.inspector;
+  nb.coordSys  = src.coordSys;
+  nb.co        = src.co;
+  nb.driller   = src.driller;
+  nb.rig       = src.rig;
+  nb.method    = src.method;
+  nb.hammer    = src.hammer;
+  nb.samplerID = src.samplerID;
+  nb.hamWt     = src.hamWt;
+  nb.hamDrop   = src.hamDrop;
+  nb.hamCal    = src.hamCal;
+  nb.coreMethod= src.coreMethod;
+  nb.coreDia   = src.coreDia;
+  state.borings.push(nb);
+  state.activeBoring = state.borings.length - 1;
+  renderBoringCards();
+  renderBoringSelect();
+  showToast('Boring ' + trimmed + ' copied from ' + src.id, 'success');
+  setTimeout(() => {
+    const card = document.getElementById(`bc-${trimmed.replace(/[^a-zA-Z0-9]/g, '_')}`);
+    if (card) { card.classList.add('expanded'); card.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  }, 60);
+}
+
 function selectBoring(id) {
   const idx = state.borings.findIndex(b => b.id === id);
   if (idx === -1) return;
@@ -649,7 +681,8 @@ function saveBoring(id) {
     coreMethod:gv('core-method'), coreDia: gv('core-dia'),
     north:     gv('north'), east: gv('east'), coordSys: gv('coord-sys'),
     lat:       gv('lat'), lon: gv('lon'), elev: gv('elev'),
-    holeDepth: gv('hole-depth'), complete: gv('complete-date'), notes: gv('notes')
+    holeDepth: gv('hole-depth'), complete: gv('complete-date'), notes: gv('notes'),
+    sptIntervals: gv('spt-intervals')
   });
   // Update active boring if this is the one
   state.activeBoring = state.borings.findIndex(b2 => b2.id === b.id);
@@ -757,13 +790,20 @@ function renderBoringCards() {
           <div class="field"><label>Rig</label>
             <input type="text" id="${pfx}rig" value="${b.rig}" placeholder="e.g. CME 45"></div>
         </div>
-        <div class="field"><label>Advancement Method</label>
-          <select id="${pfx}method">
-            ${['','Hollow Stem Auger (2.25")','Hollow Stem Auger (3.25")','Hollow Stem Auger (4.25")',
-               'Mud Rotary','Air Rotary','Wireline NQ Double-Tube','Wireline HQ Double-Tube',
-               'Casing Advance','Direct Push','Other']
-              .map(o=>`<option value="${o}"${b.method===o?' selected':''}>${o||'— Select —'}</option>`).join('')}
-          </select></div>
+        <div class="grid-2">
+          <div class="field"><label>Advancement Method</label>
+            <select id="${pfx}method">
+              ${['','Hollow Stem Auger (2.25")','Hollow Stem Auger (3.25")','Hollow Stem Auger (4.25")',
+                 'Mud Rotary','Air Rotary','Wireline NQ Double-Tube','Wireline HQ Double-Tube',
+                 'Casing Advance','Direct Push','Other']
+                .map(o=>`<option value="${o}"${b.method===o?' selected':''}>${o||'— Select —'}</option>`).join('')}
+            </select></div>
+          <div class="field"><label>SPT Interval</label>
+            <select id="${pfx}spt-intervals">
+              <option value="3"${(b.sptIntervals||'3')==='3'?' selected':''}>3-Interval (18 in)</option>
+              <option value="4"${b.sptIntervals==='4'?' selected':''}>4-Interval (24 in)</option>
+            </select></div>
+        </div>
         <div class="grid-2">
           <div class="field"><label>SPT Hammer Type</label>
             <select id="${pfx}hammer">
@@ -855,7 +895,7 @@ function saveToCurrent() {
   state.project = {
     name:    v('proj-name'), num: v('proj-num'), client: v('proj-client'),
     state:   v('proj-state'), county: v('proj-county'),
-    units:   v('proj-units'), sptIntervals: v('proj-spt-intervals')
+    units:   v('proj-units')
   };
   updateHdr();
 }
@@ -871,7 +911,6 @@ let sptId = 0;
 function addSPT() {
   if (!requireBoring()) return;
   const id = ++sptId;
-  const intervals = state.project.sptIntervals || '3';
   ab().spt.push({ id, type:'S', num:'', topDepth:'', length:'', intervalLen:'',
     b1:'', b2:'', b3:'', b4:'', recovery:'', refusal:false, notes:'' });
   renderSPT();
@@ -888,8 +927,8 @@ function delSPT(id) {
   renderSPT(); updateStatusBar();
 }
 
-function calcN(r) {
-  const intervals = state.project.sptIntervals || '3';
+function calcN(r, intervals) {
+  intervals = intervals || '3';
   const b1=parseInt(r.b1), b2=parseInt(r.b2), b3=parseInt(r.b3), b4=parseInt(r.b4);
 
   if (r.refusal) {
@@ -900,9 +939,6 @@ function calcN(r) {
     if (!isNaN(b2) && b2 >= 50) return (isNaN(b1)?50:50) + '*'; // N = 50 by convention
     // 3rd interval refusal — N = b2 + b3 (even if b3 is partial/50)
     if (!isNaN(b2) && !isNaN(b3)) {
-      if (intervals === '4' && !isNaN(b4)) {
-        return (b2 + b3 + b4) + '*';
-      }
       return (b2 + b3) + '*';
     }
     // Fallback: show 50*
@@ -910,8 +946,8 @@ function calcN(r) {
   }
 
   if (intervals === '4') {
-    if (isNaN(b2)||isNaN(b3)||isNaN(b4)) return '—';
-    return b2+b3+b4;
+    if (isNaN(b2)||isNaN(b3)) return '—';
+    return b2+b3;
   } else {
     if (isNaN(b2)||isNaN(b3)) return '—';
     return b2+b3;
@@ -946,9 +982,9 @@ function renderSPT() {
     el.innerHTML = `<div class="empty"><div class="empty-icon">🔨</div><div class="empty-text">No samples — tap Add Sample</div></div>`;
     return;
   }
-  const intervals = state.project.sptIntervals || '3';
+  const intervals = b.sptIntervals || '3';
   el.innerHTML = b.spt.map(r => {
-    const n = (r.type==='S') ? calcN(r) : '—';
+    const n = (r.type==='S') ? calcN(r, intervals) : '—';
     const bot = calcBottom(r);
     const isSPT = r.type === 'S';
     const isTube = r.type === 'T';
@@ -1068,7 +1104,7 @@ function updSPT(id, field, val) {
 function updN(id) {
   const r = ab()?.spt.find(r => r.id === id);
   if (!r) return;
-  const n = calcN(r);
+  const n = calcN(r, ab()?.sptIntervals || '3');
   const nd = document.getElementById('nd-'+id);
   const nb = document.getElementById('nb-'+id);
   if (nd) nd.textContent = n;
@@ -1158,7 +1194,7 @@ function renderLith() {
       <div class="entry-body">
         <div class="grid-2">
           <div class="field">
-            <label>Line Type (Stratum Break)</label>
+            <label>Line Type — Bottom of Stratum</label>
             <select onchange="updLith(${l.id},'lineType',this.value)">
               <option${l.lineType==='Dash'?' selected':''} value="Dash">Dashed — Inferred</option>
               <option${l.lineType==='Solid'?' selected':''} value="Solid">Solid — Observed</option>
@@ -1726,7 +1762,6 @@ function loadLog(id) {
   setv('proj-name', state.project.name); setv('proj-num', state.project.num);
   setv('proj-client', state.project.client); setv('proj-state', state.project.state);
   setv('proj-county', state.project.county); setv('proj-units', state.project.units);
-  setv('proj-spt-intervals', state.project.sptIntervals);
   renderBoringCards();
   renderBoringSelect();
   renderAll();
@@ -1844,7 +1879,6 @@ function loadJSON() {
         setv('proj-state', state.project.state);
         setv('proj-county', state.project.county);
         setv('proj-units', state.project.units);
-        setv('proj-spt-intervals', state.project.sptIntervals);
         if (state.borings.length) state.activeBoring = 0;
         renderBoringCards();
         renderBoringSelect();
