@@ -145,6 +145,8 @@
   .hdr-btn.save:hover{background:rgba(134,239,172,.15)}
   .hdr-btn.print-btn{border-color:rgba(147,197,253,.35);color:#93c5fd}
   .hdr-btn.print-btn:hover{background:rgba(147,197,253,.12)}
+  .hdr-btn.import-btn{border-color:rgba(251,191,36,.4);color:#fcd34d}
+  .hdr-btn.import-btn:hover{background:rgba(251,191,36,.12)}
   .hidden{display:none}
   tr:hover td{filter:brightness(.98)}
 
@@ -172,6 +174,7 @@
       <div class="header-sub">SPT (N<sub>1</sub>)<sub>60</sub> &rarr; &phi; (deg) for coarse-grained &nbsp;&middot;&nbsp; S<sub>u</sub> (ksf) for fine-grained &nbsp;&middot;&nbsp; Peck/Hanson/Thornburn C<sub>N</sub></div>
     </div>
     <div style="display:flex;gap:8px;align-items:center">
+      <button class="hdr-btn import-btn" onclick="importFromFieldLog()" title="Import boring and SPT data from a FieldLog v2 JSON snapshot">&#8645; Import from FieldLog</button>
       <button class="hdr-btn save" onclick="saveProject()" title="Save all project data to a JSON file">&#8659; Save Project</button>
       <button class="hdr-btn"      onclick="loadProject()" title="Load a previously saved project JSON file">&#8657; Load Project</button>
       <button class="hdr-btn print-btn" onclick="printAll()" title="Print all borings + summary + reference sheet (opens print window)">&#9113; Print All</button>
@@ -1267,14 +1270,7 @@ function buildClassPlot(pts, cls, useElev, yLo, yHi, titlePrefix) {
   const { s: grid, sx, sy, PH } = makeSvgBase(VW, VH, ML, MR, MT, MB, xMax, yLo, yHi, useElev, xfmt);
   let data = '';
   // connecting line (segment colored by "from" point's stratum)
-  // Skip segment if any opposite-class point lies between the two endpoints in depth,
-  // indicating a soil-type interruption — leave a visible gap instead.
-  const otherCls = cls==='coarse' ? 'fine' : 'coarse';
   for (let i=1;i<cp.length;i++){
-    const y0 = Math.min(cp[i-1].yVal, cp[i].yVal);
-    const y1 = Math.max(cp[i-1].yVal, cp[i].yVal);
-    const interrupted = pts.some(p => p.cls===otherCls && p.yVal > y0 && p.yVal < y1);
-    if (interrupted) continue;
     const segCol = cp[i-1].sc ? cp[i-1].sc.br : col.line;
     data += `<line x1="${sx(cp[i-1].val)}" y1="${sy(cp[i-1].yVal)}" x2="${sx(cp[i].val)}" y2="${sy(cp[i].yVal)}" stroke="${segCol}" stroke-width="2" opacity="0.75"/>`;
   }
@@ -1417,12 +1413,7 @@ function buildSummaryPlot(allSamples) {
     let data='';
     borGroups.forEach(g=>{
       const cp = g.pts.filter(p=>p.cls===cls);
-      const otherClsS = cls==='coarse' ? 'fine' : 'coarse';
       for (let i=1;i<cp.length;i++){
-        const y0 = Math.min(cp[i-1].yVal, cp[i].yVal);
-        const y1 = Math.max(cp[i-1].yVal, cp[i].yVal);
-        const interrupted = g.pts.some(p => p.cls===otherClsS && p.yVal > y0 && p.yVal < y1);
-        if (interrupted) continue;
         data += `<line x1="${sx(cp[i-1].val)}" y1="${sy(cp[i-1].yVal)}" x2="${sx(cp[i].val)}" y2="${sy(cp[i].yVal)}" stroke="${cp[i-1].sc.br}" stroke-width="2" opacity="0.85" stroke-dasharray="${g.dash}"/>`;
       }
       cp.forEach(p=>{
@@ -1658,6 +1649,121 @@ function buildRef() {
 </tbody></table>
 <div class="tbl-note" style="margin-top:12px">${assumptionsNote()}</div>`;
   document.getElementById('refBody').dataset.built = '1';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// IMPORT FROM FIELDLOG
+// ═══════════════════════════════════════════════════════════════════════════
+function importFromFieldLog() {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = '.json';
+  inp.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = evt => {
+      try {
+        const snap = JSON.parse(evt.target.result);
+
+        // Validate FieldLog v2 snapshot
+        if (snap._tool !== 'FieldLog v2')
+          throw new Error('This does not appear to be a FieldLog v2 snapshot.\nCheck that you selected the correct file and try again.');
+        const flState = snap.state;
+        if (!flState?.borings?.length)
+          throw new Error('No borings found in the FieldLog snapshot.');
+
+        // Filter to borings that have at least one S-type SPT row with a depth
+        const validBorings = flState.borings
+          .map(b => ({
+            b,
+            sptRows: (b.spt || []).filter(r => r.type === 'S' && r.topDepth !== '' && r.topDepth != null)
+          }))
+          .filter(({ sptRows }) => sptRows.length > 0);
+
+        if (!validBorings.length)
+          throw new Error('No borings with SPT data were found in the snapshot.');
+
+        // Confirm replacement of any existing borings
+        if (boringKeys.length > 0) {
+          const ok = confirm(
+            `This will replace the ${boringKeys.length} boring(s) currently in the calculator ` +
+            `with ${validBorings.length} boring(s) from the FieldLog snapshot.\n` +
+            `Strata definitions will not be affected.\n\nContinue?`
+          );
+          if (!ok) return;
+        }
+
+        // Clear existing borings
+        [...boringKeys].forEach(bkey => {
+          document.getElementById('tabbtn-' + bkey)?.remove();
+          document.getElementById('tabpanel-' + bkey)?.remove();
+        });
+        boringKeys.length = 0;
+        nextBK = 1;
+
+        validBorings.forEach(({ b, sptRows }) => {
+          const bkey   = 'BR' + nextBK++;
+          boringKeys.push(bkey);
+          const counter = boringKeys.length;
+
+          // Tab button
+          const btn = document.createElement('button');
+          btn.className = 'tab-btn'; btn.id = 'tabbtn-' + bkey;
+          btn.textContent = b.id || ('B-' + counter);
+          btn.onclick = () => switchTab(bkey);
+          document.getElementById('tabBar').insertBefore(btn, document.querySelector('.add-tab'));
+
+          // Tab panel
+          const panel = document.createElement('div');
+          panel.id = 'tabpanel-' + bkey; panel.className = 'tab-panel';
+          panel.innerHTML = boringPanelHTML(bkey, counter);
+          document.getElementById('tabPanels').appendChild(panel);
+
+          const sv = (id, v) => { const el = document.getElementById(id); if (el && v != null && v !== '') el.value = v; };
+
+          // Boring header fields
+          sv(`blabel-${bkey}`, b.id);
+          // FieldLog stores hamWt/hamDrop but not ER% directly — default to 60
+          // GW depth — use the first reading that has a depth value
+          const firstGW = (b.gw || []).find(g => g.depth !== '' && g.depth != null);
+          if (firstGW) sv(`bgw-${bkey}`, firstGW.depth);
+          // CE display — ER defaults to 60, so CE = 1.00
+          const ceEl = document.getElementById(`bce-${bkey}`);
+          if (ceEl) ceEl.textContent = '1.00';
+
+          // Create sample rows then populate
+          sv(`bns-${bkey}`, sptRows.length);
+          updateSampleCount(bkey, sptRows.length);
+
+          sptRows.forEach((r, idx) => {
+            sv(`dep-${bkey}-${idx}`, r.topDepth);
+            sv(`len-${bkey}-${idx}`, r.intervalLen || r.length || '');
+            // N = b2 + b3 (blows for the two 6″ drive intervals used in SPT)
+            const b2 = parseInt(r.b2), b3 = parseInt(r.b3);
+            if (!isNaN(b2) && !isNaN(b3)) sv(`nval-${bkey}-${idx}`, String(b2 + b3));
+          });
+
+          recalcBoring(bkey);
+        });
+
+        if (boringKeys.length) switchTab(boringKeys[0]);
+
+        const skipped = flState.borings.length - validBorings.length;
+        alert([
+          `✓ Imported ${validBorings.length} boring${validBorings.length !== 1 ? 's' : ''} from FieldLog.`,
+          skipped ? `  ${skipped} boring${skipped !== 1 ? 's' : ''} skipped (no SPT data).` : '',
+          ``,
+          `Energy ratio defaulted to 60% — update each boring if your hammer calibration differs.`,
+          `Assign strata to each sample row, then click Calculate.`
+        ].filter(s => s !== null).join('\n'));
+
+      } catch (err) {
+        alert('Could not import FieldLog snapshot:\n' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  };
+  inp.click();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
