@@ -2162,28 +2162,20 @@ setInterval(autosave, AUTOSAVE_MS);
 // overflow:hidden entry-card containers on all devices.
 let _ssPortal = null;
 let _ssActCtx = null;
-let _ssKeepOpen = false; // set true while portal is being interacted with
 
 function _ssGetPortal() {
   if (_ssPortal) return _ssPortal;
   _ssPortal = document.createElement('div');
   _ssPortal.id = 'ss-portal';
   document.body.appendChild(_ssPortal);
-  // Close on outside click
-  document.addEventListener('mousedown', e => {
+  // Close when clicking or tapping outside the portal and its owning wrap
+  function outsideClose(e) {
     if (_ssActCtx && !_ssActCtx.wrap.contains(e.target) && !_ssPortal.contains(e.target)) {
       _ssClose();
     }
-  });
-  // Keep-open guard: prevents blur-close when user mousedowns/touches a portal option
-  _ssPortal.addEventListener('mousedown', () => {
-    _ssKeepOpen = true;
-    setTimeout(() => { _ssKeepOpen = false; }, 300);
-  });
-  _ssPortal.addEventListener('touchstart', () => {
-    _ssKeepOpen = true;
-    setTimeout(() => { _ssKeepOpen = false; }, 300);
-  }, { passive: true });
+  }
+  document.addEventListener('mousedown', outsideClose);
+  document.addEventListener('touchstart', outsideClose, { passive: true });
   // Reposition on scroll / resize
   window.addEventListener('scroll', () => { if (_ssActCtx) _ssPos(_ssActCtx.input); }, true);
   window.addEventListener('resize', () => { if (_ssActCtx) _ssPos(_ssActCtx.input); });
@@ -2324,8 +2316,16 @@ function enhanceSelect(sel) {
   input.addEventListener('input', () => _ssBuild(ctx, input.value));
 
   input.addEventListener('blur', () => {
-    // Delay so portal mousedown/touchstart can set _ssKeepOpen first
-    setTimeout(() => { if (!_ssKeepOpen) _ssClose(); }, 200);
+    // Capture which context owns this input. After the delay:
+    //   - if _ssActCtx is still OUR context → nothing has opened since, safe to close
+    //   - if _ssActCtx switched to another context → a new portal opened, leave it alone
+    // 400ms safely clears the ~300ms synthesised-tap delay on older mobile browsers.
+    const capturedCtx = ctx;
+    setTimeout(() => {
+      if (_ssActCtx === capturedCtx && !capturedCtx.wrap.contains(document.activeElement)) {
+        _ssClose();
+      }
+    }, 400);
   });
 
   input.addEventListener('keydown', e => {
