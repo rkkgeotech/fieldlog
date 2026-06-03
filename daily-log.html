@@ -142,6 +142,12 @@ textarea.finput.tall{min-height:100px}
 .total-cell{text-align:center;font-family:var(--mono);font-size:13px;font-weight:600;color:var(--accent);width:70px;padding:4px 8px!important}
 .total-cell.zero{color:var(--muted);font-weight:400}
 .unit-wrap{display:flex;gap:3px;align-items:center}
+/* ── LS CLAIMED ROW ── */
+.row-claimed td{background:#f6f7f9!important}
+.row-claimed input,.row-claimed select{color:var(--muted)!important;pointer-events:none}
+.row-claimed .qty-input{background:#eef0f3!important;border-radius:3px;color:var(--muted)!important;cursor:not-allowed}
+.claimed-badge{display:inline-flex;align-items:center;gap:4px;font-family:var(--cond);font-weight:700;font-size:10px;letter-spacing:.6px;text-transform:uppercase;color:var(--green);background:var(--green-lt);border:1px solid #b2d8cc;padding:2px 7px;border-radius:10px;white-space:nowrap}
+.claimed-badge svg{flex-shrink:0}
 .unit-custom{display:none;background:transparent;border:none;border-bottom:1px solid var(--border2);font-family:var(--sans);font-size:12px;color:var(--text);width:72px;padding:2px 4px}
 .unit-custom:focus{outline:none;border-bottom-color:var(--accent)}
 .btn-add{display:flex;align-items:center;gap:5px;justify-content:center;background:none;border:1px dashed var(--border2);color:var(--muted);font-family:var(--cond);font-weight:600;font-size:11px;letter-spacing:.6px;text-transform:uppercase;padding:6px 12px;border-radius:5px;cursor:pointer;margin-top:8px;transition:all .15s;width:100%}
@@ -751,7 +757,8 @@ function saveCurrentLogToState(){
   log.tasks=[];
   document.getElementById('tasks-body').querySelectorAll('tr').forEach(tr=>{
     const inputs=tr.querySelectorAll('input,select'); const sel=tr.querySelector('select'); const ci=tr.querySelector('.unit-custom');
-    log.tasks.push({ itemNo:inputs[0]?.value||'', description:inputs[1]?.value||'', qty:inputs[2]?.value||'', unit:sel?.value||'LS', unitCustom:ci?.value||'' });
+    const qtyEl=tr.querySelectorAll('input')[2];
+    log.tasks.push({ itemNo:inputs[0]?.value||'', description:inputs[1]?.value||'', qty:(!qtyEl||qtyEl.disabled)?'':qtyEl.value, unit:sel?.value||'LS', unitCustom:ci?.value||'' });
   });
   log.borings=[];
   document.getElementById('borings-body').querySelectorAll('tr').forEach(tr=>{
@@ -839,15 +846,33 @@ function addTaskRow(itemNo,desc,qty,unit,cu){
 }
 function recalcTotals(){
   const other={};
-  project.logs.forEach(log=>{ if(log.id===activeLogId) return; (log.tasks||[]).forEach(t=>{ const k=String(t.itemNo).trim(); if(!k) return; other[k]=(other[k]||0)+(parseFloat(t.qty)||0); }); });
+  const otherUnit={};
+  project.logs.forEach(log=>{ if(log.id===activeLogId) return; (log.tasks||[]).forEach(t=>{ const k=String(t.itemNo).trim(); if(!k) return; other[k]=(other[k]||0)+(parseFloat(t.qty)||0); if(t.unit) otherUnit[k]=t.unit; }); });
   document.getElementById('tasks-body').querySelectorAll('tr').forEach(tr=>{
     const cells=tr.querySelectorAll('td'); if(cells.length<5) return;
     const itemNo=cells[0].querySelector('input')?.value?.trim()||'';
-    const qty=parseFloat(cells[2].querySelector('input')?.value)||0;
+    const qtyInput=cells[2].querySelector('input');
+    const unitSel=cells[3].querySelector('select');
     const tc=cells[4];
+    tr.classList.remove('row-claimed');
+    if(qtyInput){ qtyInput.classList.remove('qty-input'); qtyInput.disabled=false; qtyInput.title=''; }
     if(!itemNo){ tc.textContent='—'; tc.className='total-cell zero'; return; }
+    const qty=parseFloat(qtyInput?.value)||0;
     const total=(other[itemNo]||0)+qty;
-    tc.textContent=total%1===0?total:total.toFixed(2); tc.className=total>0?'total-cell':'total-cell zero';
+    // Determine current unit from select or fall back to what other logs recorded
+    const currentUnit=unitSel?.value||otherUnit[itemNo]||'';
+    const isLS=currentUnit==='LS';
+    const otherTotal=other[itemNo]||0;
+    const isClaimed=isLS && otherTotal>=1;
+    if(isClaimed){
+      tr.classList.add('row-claimed');
+      if(qtyInput){ qtyInput.classList.add('qty-input'); qtyInput.disabled=true; qtyInput.value=''; qtyInput.title='LS item already claimed in another log'; }
+      tc.innerHTML='<span class="claimed-badge"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Claimed</span>';
+      tc.className='total-cell';
+    } else {
+      tc.textContent=total%1===0?total:total.toFixed(2);
+      tc.className=total>0?'total-cell':'total-cell zero';
+    }
   });
 }
 
