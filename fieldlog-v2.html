@@ -317,6 +317,39 @@ header {
 .metric-lbl { font-family:var(--cond); font-size:10px; letter-spacing:1px; text-transform:uppercase; color:var(--muted); margin-top:2px; }
 .metric-desc { font-size:11px; color:var(--muted); margin-top:3px; }
 
+/* ── SEARCHABLE SELECT ── */
+.ss-wrap { position:relative; }
+.ss-input {
+  width:100%; background:var(--bg); border:1px solid var(--border);
+  border-radius:5px; color:var(--text); font-family:var(--sans);
+  font-size:15px; padding:8px 30px 8px 11px;
+  transition:border-color .15s, box-shadow .15s; cursor:pointer;
+  -webkit-appearance:none; appearance:none;
+}
+.ss-input:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(27,79,138,.12); }
+.ss-caret {
+  position:absolute; right:11px; top:50%; transform:translateY(-50%);
+  pointer-events:none; width:10px; height:6px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b7490'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:center;
+}
+#ss-portal {
+  position:fixed; z-index:9000;
+  background:var(--surface); border:1.5px solid var(--accent);
+  border-radius:6px; overflow-y:auto;
+  box-shadow:0 4px 16px rgba(0,0,0,.18); display:none;
+}
+.ss-opt { padding:8px 11px; cursor:pointer; font-size:14px; font-family:var(--sans); color:var(--text); }
+.ss-opt:hover, .ss-opt.hi { background:var(--accent-lt); color:var(--accent); }
+.ss-grp {
+  padding:5px 11px 3px; font-size:10px; font-family:var(--cond); font-weight:700;
+  letter-spacing:1px; text-transform:uppercase; color:var(--muted);
+  background:var(--bg); border-top:1px solid var(--border); cursor:default;
+}
+.ss-grp:first-child { border-top:none; }
+.ss-none { padding:8px 11px; font-size:14px; color:var(--muted); font-style:italic; cursor:default; }
+.ss-opt strong { font-weight:700; }
+
 </style>
 </head>
 <body>
@@ -868,6 +901,7 @@ function renderBoringCards() {
       </div>
     </div>`;
   }).join('');
+  makeSearchableSelects(el);
 }
 
 function toggleBorCard(uid, boringId) {
@@ -1102,6 +1136,7 @@ function renderSPT() {
       </div>
     </div>`;
   }).join('');
+  makeSearchableSelects(el);
 }
 
 function updSPT(id, field, val) {
@@ -1243,8 +1278,11 @@ function updLith(id, field, val) {
       const fine = isFineUSCS(val);
       // Update density/consistency dropdown only
       const dc = document.getElementById(`dc-${id}`);
-      if (dc) dc.innerHTML = (fine ? CONSIST_FINE : DENSITY_COARSE)
-        .map(o => `<option${l.densityConsist===o?' selected':''}>${o}</option>`).join('');
+      if (dc) {
+        dc.innerHTML = (fine ? CONSIST_FINE : DENSITY_COARSE)
+          .map(o => `<option${l.densityConsist===o?' selected':''}>${o}</option>`).join('');
+        syncSearchSelect(dc);
+      }
     }
   }
 }
@@ -1414,6 +1452,7 @@ function renderLith() {
         </div>
       </div>
     </div>`).join('');
+  makeSearchableSelects(el);
 }
 
 // ── GROUNDWATER ──────────────────────────────────────────────────
@@ -1491,6 +1530,7 @@ function renderGW() {
         </div>
       </div>
     </div>`).join('');
+  makeSearchableSelects(el);
 }
 
 // ── ROCK CORING ──────────────────────────────────────────────────
@@ -1676,6 +1716,7 @@ function renderRock() {
       </div>
     </div>`;
   }).join('');
+  makeSearchableSelects(el);
 }
 
 // ── RENDER ALL ───────────────────────────────────────────────────
@@ -2116,10 +2157,207 @@ function dismissAutosaveBanner() {
 
 setInterval(autosave, AUTOSAVE_MS);
 
+// ── SEARCHABLE SELECT ENGINE ──────────────────────────────────────
+// Uses a single body-level portal (position:fixed) so it escapes
+// overflow:hidden entry-card containers on all devices.
+let _ssPortal = null;
+let _ssActCtx = null;
+
+function _ssGetPortal() {
+  if (_ssPortal) return _ssPortal;
+  _ssPortal = document.createElement('div');
+  _ssPortal.id = 'ss-portal';
+  document.body.appendChild(_ssPortal);
+  // Close on outside click
+  document.addEventListener('mousedown', e => {
+    if (_ssActCtx && !_ssActCtx.wrap.contains(e.target) && !_ssPortal.contains(e.target)) {
+      _ssClose();
+    }
+  });
+  // Reposition on scroll / resize
+  window.addEventListener('scroll', () => { if (_ssActCtx) _ssPos(_ssActCtx.input); }, true);
+  window.addEventListener('resize', () => { if (_ssActCtx) _ssPos(_ssActCtx.input); });
+  return _ssPortal;
+}
+
+function _ssPos(input) {
+  const p = _ssGetPortal(), r = input.getBoundingClientRect();
+  p.style.left  = r.left + 'px';
+  p.style.width = r.width + 'px';
+  const below = window.innerHeight - r.bottom - 4;
+  const above = r.top - 4;
+  if (below >= 100 || below >= above) {
+    p.style.top    = (r.bottom + 2) + 'px';
+    p.style.bottom = '';
+    p.style.maxHeight = Math.max(80, Math.min(220, below)) + 'px';
+  } else {
+    p.style.bottom = (window.innerHeight - r.top + 2) + 'px';
+    p.style.top    = '';
+    p.style.maxHeight = Math.max(80, Math.min(220, above)) + 'px';
+  }
+}
+
+function _ssClose() {
+  if (!_ssActCtx) return;
+  const { sel, input } = _ssActCtx;
+  _ssGetPortal().style.display = 'none';
+  const cur = sel.options[sel.selectedIndex];
+  input.value = (cur && cur.value !== '') ? cur.text : '';
+  _ssActCtx = null;
+}
+
+function _ssBuild(ctx, q) {
+  const p = _ssGetPortal();
+  p.innerHTML = '';
+  p.style.display = 'block';
+  _ssActCtx = ctx;
+  if (ctx) ctx.hiIdx = -1;
+  q = (q || '').toLowerCase().trim();
+  const sel = ctx.sel;
+  let count = 0;
+  const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  function addOpt(value, text) {
+    text = text.trim();
+    if (!text) return false;
+    if (q && !text.toLowerCase().includes(q)) return false;
+    const d = document.createElement('div');
+    d.className = 'ss-opt';
+    d.dataset.value = value;
+    d.dataset.text  = text;
+    if (q) {
+      const i = text.toLowerCase().indexOf(q);
+      d.innerHTML = esc(text.slice(0,i)) + '<strong>' + esc(text.slice(i, i+q.length)) + '</strong>' + esc(text.slice(i+q.length));
+    } else {
+      d.textContent = text;
+    }
+    if (value !== '' && value === sel.value) d.classList.add('hi');
+    d.addEventListener('mousedown', e => { e.preventDefault(); ctx.choose(value, text); });
+    p.appendChild(d);
+    count++;
+    return true;
+  }
+
+  Array.from(sel.children).forEach(node => {
+    if (node.tagName === 'OPTGROUP') {
+      let grpAdded = false;
+      Array.from(node.children).forEach(opt => {
+        const txt = opt.text.trim();
+        if (!txt || (q && !txt.toLowerCase().includes(q))) return;
+        if (!grpAdded) {
+          const g = document.createElement('div');
+          g.className = 'ss-grp';
+          g.textContent = node.label;
+          p.appendChild(g);
+          grpAdded = true;
+        }
+        addOpt(opt.value !== '' ? opt.value : opt.text, opt.text);
+      });
+    } else {
+      addOpt(node.value !== '' ? node.value : node.text, node.text);
+    }
+  });
+
+  if (!count) {
+    const nm = document.createElement('div');
+    nm.className = 'ss-none';
+    nm.textContent = 'No matches';
+    p.appendChild(nm);
+  }
+  _ssPos(ctx.input);
+  const hi = p.querySelector('.hi');
+  if (hi) hi.scrollIntoView({ block: 'nearest' });
+}
+
+function enhanceSelect(sel) {
+  if (sel.dataset.ssEnhanced) return;
+  sel.dataset.ssEnhanced = '1';
+  sel.style.display = 'none';
+
+  const wrap = document.createElement('div');
+  wrap.className = 'ss-wrap';
+  sel.parentNode.insertBefore(wrap, sel);
+  wrap.appendChild(sel);
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'ss-input';
+  input.setAttribute('autocomplete', 'off');
+  input.setAttribute('spellcheck', 'false');
+  input.setAttribute('autocorrect', 'off');
+  input.setAttribute('autocapitalize', 'off');
+  const curOpt = sel.options[sel.selectedIndex];
+  input.value = (curOpt && curOpt.value !== '') ? curOpt.text : '';
+  input.placeholder = '— Select or type —';
+  wrap.appendChild(input);
+
+  const caret = document.createElement('span');
+  caret.className = 'ss-caret';
+  wrap.appendChild(caret);
+
+  const ctx = {
+    sel, input, wrap, hiIdx: -1,
+    choose(value, text) {
+      sel.value = value;
+      input.value = text;
+      _ssClose();
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  };
+
+  input.addEventListener('focus', () => {
+    input.select();
+    setTimeout(() => { input.value = ''; _ssBuild(ctx, ''); }, 0);
+  });
+
+  input.addEventListener('input', () => _ssBuild(ctx, input.value));
+
+  input.addEventListener('blur', () => setTimeout(_ssClose, 180));
+
+  input.addEventListener('keydown', e => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (_ssActCtx !== ctx) _ssBuild(ctx, '');
+      const opts = [..._ssGetPortal().querySelectorAll('.ss-opt')];
+      ctx.hiIdx = e.key === 'ArrowDown'
+        ? Math.min(ctx.hiIdx + 1, opts.length - 1)
+        : Math.max(ctx.hiIdx - 1, 0);
+      opts.forEach((o, i) => o.classList.toggle('hi', i === ctx.hiIdx));
+      if (opts[ctx.hiIdx]) opts[ctx.hiIdx].scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      const opts = [..._ssGetPortal().querySelectorAll('.ss-opt')];
+      if (opts[ctx.hiIdx]) ctx.choose(opts[ctx.hiIdx].dataset.value, opts[ctx.hiIdx].dataset.text);
+    } else if (e.key === 'Escape' || e.key === 'Tab') {
+      _ssClose();
+    }
+  });
+
+  caret.addEventListener('mousedown', e => {
+    e.preventDefault();
+    if (_ssActCtx === ctx) { _ssClose(); input.blur(); }
+    else { input.focus(); }
+  });
+}
+
+function makeSearchableSelects(container) {
+  (container || document).querySelectorAll('.field select').forEach(enhanceSelect);
+}
+
+// Call after updating a select's innerHTML externally (e.g. dc/consistency rebuild)
+function syncSearchSelect(sel) {
+  if (!sel?.dataset.ssEnhanced) return;
+  const input = sel.parentElement?.querySelector('.ss-input');
+  if (!input) return;
+  const cur = sel.options[sel.selectedIndex];
+  input.value = (cur && cur.value !== '') ? cur.text : '';
+}
+
 // ── INIT ─────────────────────────────────────────────────────────
 renderBoringCards();
 renderSaved();
 updateStatusBar();
+makeSearchableSelects(); // enhance static selects in Project tab
 
 // ── SERVICE WORKER REGISTRATION ──────────────────────────────────
 if ('serviceWorker' in navigator) {
