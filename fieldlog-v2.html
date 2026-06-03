@@ -2162,6 +2162,7 @@ setInterval(autosave, AUTOSAVE_MS);
 // overflow:hidden entry-card containers on all devices.
 let _ssPortal = null;
 let _ssActCtx = null;
+let _ssKeepOpen = false; // set true while portal is being interacted with
 
 function _ssGetPortal() {
   if (_ssPortal) return _ssPortal;
@@ -2174,6 +2175,15 @@ function _ssGetPortal() {
       _ssClose();
     }
   });
+  // Keep-open guard: prevents blur-close when user mousedowns/touches a portal option
+  _ssPortal.addEventListener('mousedown', () => {
+    _ssKeepOpen = true;
+    setTimeout(() => { _ssKeepOpen = false; }, 300);
+  });
+  _ssPortal.addEventListener('touchstart', () => {
+    _ssKeepOpen = true;
+    setTimeout(() => { _ssKeepOpen = false; }, 300);
+  }, { passive: true });
   // Reposition on scroll / resize
   window.addEventListener('scroll', () => { if (_ssActCtx) _ssPos(_ssActCtx.input); }, true);
   window.addEventListener('resize', () => { if (_ssActCtx) _ssPos(_ssActCtx.input); });
@@ -2306,13 +2316,17 @@ function enhanceSelect(sel) {
   };
 
   input.addEventListener('focus', () => {
-    input.select();
+    // Do NOT call input.select() here — it triggers a spurious blur/refocus cycle
+    // on many browsers, causing the dropdown to flash open then immediately close.
     setTimeout(() => { input.value = ''; _ssBuild(ctx, ''); }, 0);
   });
 
   input.addEventListener('input', () => _ssBuild(ctx, input.value));
 
-  input.addEventListener('blur', () => setTimeout(_ssClose, 180));
+  input.addEventListener('blur', () => {
+    // Delay so portal mousedown/touchstart can set _ssKeepOpen first
+    setTimeout(() => { if (!_ssKeepOpen) _ssClose(); }, 200);
+  });
 
   input.addEventListener('keydown', e => {
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
