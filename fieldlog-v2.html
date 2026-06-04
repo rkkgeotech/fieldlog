@@ -59,6 +59,8 @@ header {
   overflow-x: auto; scrollbar-width: none;
   position: sticky; top: 50px; z-index: 190;
   box-shadow: var(--shadow);
+  overscroll-behavior-x: contain; /* prevent horizontal swipe from triggering browser back/forward */
+  touch-action: pan-x;            /* confine touch handling to horizontal panning within this element */
 }
 .tabs::-webkit-scrollbar { display:none; }
 .tab {
@@ -2460,6 +2462,17 @@ function syncSearchSelect(sel) {
   const cur = sel.options[sel.selectedIndex];
   input.value = (cur && cur.value !== '') ? cur.text : '';
 }
+
+// ── BACK-NAVIGATION GUARD ─────────────────────────────────────────
+// Push a dummy history entry so the first accidental "Back" press/swipe
+// just pops that state rather than leaving the page entirely.
+history.pushState({ fieldlog: true }, '');
+window.addEventListener('popstate', function(e) {
+  if (e.state && e.state.fieldlog) {
+    // Re-push the guard so it's always one step ahead
+    history.pushState({ fieldlog: true }, '');
+  }
+});
 
 // ── INIT ─────────────────────────────────────────────────────────
 renderBoringCards();
