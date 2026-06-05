@@ -1,58 +1,76 @@
-// FieldLog Service Worker
-// Cache name — bump the version string whenever you deploy an update
-// so users automatically get the new files.
-const CACHE = 'fieldlog-v2.2';
+// RK&K Geotech Tools — Service Worker
+// ─────────────────────────────────────────────────────────────────
+// IMPORTANT: Bump CACHE version string on every deployment.
+// This is what forces users' browsers to evict stale files and
+// re-download everything fresh. If you update any tool and forget
+// to bump this, field devices will keep running the old version.
+//
+//   Format: 'geotools-v<major>.<minor>'
+//   Example after any update: 'geotools-v1.1', then 'geotools-v1.2', etc.
+// ─────────────────────────────────────────────────────────────────
+const CACHE = 'geotools-v1.0';
 
-// Everything the app needs to run offline
+// ── PRE-CACHED ASSETS ─────────────────────────────────────────────
+// Only field tools are pre-cached for guaranteed offline availability.
+// Office calculators (earth pressure, Es, shear strength, etc.) are
+// NOT listed here — they load normally from the network and get
+// opportunistically cached on first visit, which is sufficient.
 const ASSETS = [
+  './index.html',
   './fieldlog-v2.html',
+  './daily-log.html',
+  './infiltration-test-log.html',
   './manifest.json',
-  // Google Fonts — cached on first load, served locally after that
+  // Google Fonts
   'https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&display=swap',
-  // SheetJS (used for gINT XLSX export)
+  // SheetJS — used by FieldLog for gINT XLSX export
   'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
 ];
 
-// ── INSTALL ──────────────────────────────────────────────────────
-// Fired once when the service worker is first registered.
-// Pre-caches all assets so the app is immediately available offline.
+// ── INSTALL ───────────────────────────────────────────────────────
+// Fired once when the service worker is first registered (or when
+// the CACHE version string changes). Pre-caches all listed assets
+// so field tools are immediately available offline.
+// If any asset fails to fetch, the entire install fails — the user
+// is never left with a broken or partial cache.
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE).then(cache => {
-      // addAll fetches and caches every asset; if any fail the whole
-      // install fails, so the user is never left with a broken cache.
-      return cache.addAll(ASSETS);
-    }).then(() => self.skipWaiting()) // activate immediately, don't wait for old SW to expire
+    caches.open(CACHE)
+      .then(cache => cache.addAll(ASSETS))
+      .then(() => self.skipWaiting()) // activate immediately, don't wait for old SW to idle out
   );
 });
 
-// ── ACTIVATE ─────────────────────────────────────────────────────
-// Fired after install. Deletes any caches from older versions so
-// stale files don't linger after a CACHE version bump.
+// ── ACTIVATE ──────────────────────────────────────────────────────
+// Fired after install. Deletes all caches from prior versions so
+// stale files don't linger on field devices after a version bump.
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(
-        keys
-          .filter(key => key !== CACHE)
-          .map(key => caches.delete(key))
+    caches.keys()
+      .then(keys =>
+        Promise.all(
+          keys
+            .filter(key => key !== CACHE)
+            .map(key => caches.delete(key))
+        )
       )
-    ).then(() => self.clients.claim()) // take control of open tabs immediately
+      .then(() => self.clients.claim()) // take control of already-open tabs immediately
   );
 });
 
 // ── FETCH ─────────────────────────────────────────────────────────
-// Intercepts every network request the app makes.
-// Strategy: Cache First — serve from cache if available, fall back
-// to network if not (and cache the response for next time).
+// Intercepts every network request.
+// Strategy: Cache First — serve from cache if available, otherwise
+// fetch from network (and cache the response for next time).
 self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;
 
-      // Not in cache — fetch from network and cache the response
+      // Not in cache — go to network
       return fetch(event.request).then(response => {
-        // Only cache valid responses (not errors, not opaque cross-origin)
+        // Only cache clean, successful responses.
+        // Skips errors and opaque cross-origin responses.
         if (!response || response.status !== 200 || response.type === 'error') {
           return response;
         }
@@ -60,11 +78,13 @@ self.addEventListener('fetch', event => {
         caches.open(CACHE).then(cache => cache.put(event.request, toCache));
         return response;
       }).catch(() => {
-        // Network failed and nothing in cache — return a minimal offline fallback
-        // for HTML navigation requests only
+        // Network failed and nothing in cache.
+        // For HTML navigation requests, return the index so the user
+        // can at least see the tool library and reach any cached tools.
         if (event.request.destination === 'document') {
-          return caches.match('./fieldlog-v2.html');
+          return caches.match('./index.html');
         }
+        // For all other asset types (JS, CSS, fonts, etc.), just fail silently.
       });
     })
   );
