@@ -1029,12 +1029,12 @@ function generateSummary() {
   });
 
   html+=`</tbody></table></div>
-    <div class="tbl-note" style="margin-top:10px">
-      Strength = φ (deg) for coarse-grained strata, S<sub>u</sub> (ksf) for fine-grained strata. Statistics computed over all included samples assigned to each stratum.
-      <strong>Median</strong> is highlighted in blue — a Mean&thinsp;&gt;&thinsp;Median gap signals right-skewed data driven by high-N outliers.
-      <strong>COV:</strong> &lt;20% low variability; 20–40% moderate; &gt;40% high (investigate mixed lithology or outliers).
-      <strong>Suggested DV</strong> = Mean − k·σ; adjust k above. Design values are user-defined — enter based on engineering judgment.
-      Run <strong>Calculate</strong> in each boring tab before generating the summary.
+    <div class="tbl-note" style="margin-top:10px;line-height:2">
+      <div>⬩ Strength = φ (deg) for coarse-grained strata, S<sub>u</sub> (ksf) for fine-grained strata. Statistics computed over all included samples assigned to each stratum.</div>
+      <div>⬩ <strong>Median</strong> is highlighted in blue. A Mean &gt; Median gap signals right-skewed data driven by high-N outliers — in that case, the median may be a more representative central tendency than the mean.</div>
+      <div>⬩ <strong>COV</strong> (Coefficient of Variation = σ / Mean): &lt;20% = low variability (mean is reliable); 20–40% = moderate (consider a conservative percentile); &gt;40% = high (investigate possible mixed lithology or outliers).</div>
+      <div>⬩ <strong>Suggested DV = Mean − k·σ.</strong> The k-factor controls how far below the mean the suggestion lands: k = 0 → mean (50th pct); k = 1.0 → ~16th pct; k = 1.645 → ~5th pct. Higher k = more conservative. Adjust using the selector above.</div>
+      <div>⬩ Design values are user-defined — enter based on engineering judgment considering the range, variability, and governing analysis. Run <strong>Calculate</strong> in each boring tab before generating the summary.</div>
     </div>`;
 
   document.getElementById('summaryContent').innerHTML = html;
