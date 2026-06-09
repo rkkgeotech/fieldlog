@@ -8,7 +8,7 @@
 //   Format: 'geotools-v<major>.<minor>'
 //   Example after any update: 'geotools-v1.1', then 'geotools-v1.2', etc.
 // ─────────────────────────────────────────────────────────────────
-const CACHE = 'geotools-v1.4';
+const CACHE = 'geotools-v1.5';
 
 // ── PRE-CACHED ASSETS ─────────────────────────────────────────────
 // Only field tools are pre-cached for guaranteed offline availability.
