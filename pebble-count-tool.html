@@ -107,24 +107,80 @@ body { font-family: var(--sans); font-size: 13px; background: var(--bg); color: 
 .wolman-table tr:nth-child(even) td { background: #f6f9fc; }
 .wolman-table td:first-child { font-family: var(--sans); font-weight: 500; font-size: 11px; }
 
-/* ── LOCATION GRID ── */
-.loc-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
-.loc-card {
-  border: 1.5px solid var(--border); border-radius: 3px; padding: 10px 10px 9px;
-  cursor: pointer; transition: border-color .15s, background .15s;
-  background: #fff; position: relative;
+/* ── LOCATION TABS ── */
+.tab-bar-card {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 3px;
+  margin-bottom: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  overflow: hidden;
 }
-.loc-card:hover { border-color: var(--blue2); background: #f0f6ff; }
-.loc-card.active { border-color: var(--blue2); background: #e8f2ff; border-width: 2px; }
-.loc-card.has-data::after {
-  content: ''; position: absolute; top: 6px; right: 6px;
-  width: 7px; height: 7px; border-radius: 50%; background: var(--green2);
+.tab-bar {
+  display: flex; align-items: stretch; overflow-x: auto; gap: 0;
+  background: var(--navy2); border-bottom: 2px solid var(--blue2);
+  scrollbar-width: thin;
 }
-.loc-num { font-family: var(--mono); font-size: 10px; font-weight: 600; color: var(--blue2); margin-bottom: 3px; }
-.loc-name { font-size: 11px; font-weight: 600; color: var(--navy); line-height: 1.3; margin-bottom: 3px; }
-.loc-desc { font-size: 10px; color: var(--muted); line-height: 1.4; }
-.loc-count { font-family: var(--mono); font-size: 10px; color: var(--muted2); margin-top: 5px; }
-.loc-count.filled { color: var(--green2); font-weight: 600; }
+.tab-bar::-webkit-scrollbar { height: 3px; }
+.tab-bar::-webkit-scrollbar-thumb { background: var(--steel); }
+.loc-tab {
+  display: flex; flex-direction: column; align-items: flex-start;
+  padding: 10px 14px 8px; border: none; border-right: 1px solid rgba(255,255,255,0.08);
+  background: transparent; color: #7a9fc0; cursor: pointer;
+  transition: background .12s, color .12s; white-space: nowrap; flex-shrink: 0;
+  position: relative;
+}
+.loc-tab:hover { background: rgba(255,255,255,0.07); color: #b8d4f0; }
+.loc-tab.active { background: rgba(36,113,201,0.25); color: #fff; }
+.loc-tab.active::after {
+  content: ''; position: absolute; bottom: -2px; left: 0; right: 0;
+  height: 2px; background: var(--blue2);
+}
+.lt-num { font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 2px; }
+.lt-name { font-family: var(--sans); font-size: 11px; font-weight: 600; line-height: 1.25; margin-bottom: 4px; }
+.lt-count { font-family: var(--mono); font-size: 9.5px; color: var(--muted2); }
+.lt-count.filled { color: #6ddc9a; font-weight: 600; }
+.loc-tab.active .lt-count { color: #a8d4f0; }
+.loc-tab.active .lt-count.filled { color: #6ddc9a; }
+.tab-divider { width: 1px; background: rgba(255,255,255,0.15); margin: 8px 4px; flex-shrink: 0; }
+.sum-tab {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 10px 18px; border: none; border-left: 1px solid rgba(255,255,255,0.08);
+  background: transparent; color: #7a9fc0; cursor: pointer; white-space: nowrap;
+  font-family: var(--sans); font-size: 11.5px; font-weight: 600; letter-spacing: 0.2px;
+  transition: background .12s, color .12s; flex-shrink: 0; position: relative;
+}
+.sum-tab:hover { background: rgba(255,255,255,0.07); color: #b8d4f0; }
+.sum-tab.active { background: rgba(36,113,201,0.25); color: #fff; }
+.sum-tab.active::after {
+  content: ''; position: absolute; bottom: -2px; left: 0; right: 0;
+  height: 2px; background: var(--blue2);
+}
+.tab-loc-info {
+  display: flex; align-items: center; gap: 10px; padding: 8px 16px;
+  border-bottom: 1px solid var(--border); background: #fafcff; font-size: 11px; color: var(--muted);
+}
+.tab-loc-info .loc-badge {
+  font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: 0.6px;
+  color: var(--blue2); background: #e8f2ff; border: 1px solid #c0d8f0;
+  padding: 2px 8px; border-radius: 2px;
+}
+.tab-loc-info .loc-full-name { font-size: 12px; font-weight: 600; color: var(--navy); }
+
+/* ── SUMMARY TAB ── */
+.summary-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.summary-table th {
+  background: var(--navy2); color: #fff; padding: 7px 12px;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase;
+  border: 1px solid rgba(255,255,255,0.1); text-align: left;
+}
+.summary-table td { padding: 7px 12px; border: 1px solid var(--border); vertical-align: middle; }
+.summary-table tr:nth-child(even) td { background: #f8fafc; }
+.summary-table tr.sum-empty td { color: var(--muted2); font-style: italic; }
+.sum-loc-num { font-family: var(--mono); font-size: 10px; font-weight: 700; color: var(--blue2); }
+.sum-loc-name { font-size: 12px; font-weight: 600; }
+.sum-val { font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--navy); }
+.sum-class { font-size: 11px; color: var(--muted); }
+.sum-count { font-family: var(--mono); font-size: 11px; }
+.sum-count.ok { color: var(--green2); font-weight: 700; }
+.sum-note { font-size: 10px; color: var(--muted2); margin-top: 10px; line-height: 1.6; }
 
 /* ── TWO-COL MAIN GRID ── */
 .main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -243,7 +299,7 @@ canvas#psd-chart { width: 100%; border: 1px solid var(--border); border-radius: 
 .log-empty { padding: 20px; text-align: center; color: var(--muted2); font-size: 12px; font-style: italic; }
 
 /* ── EXPORT ── */
-.export-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 10px; }
+.export-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
 .btn-export {
   font-family: var(--sans); font-size: 11.5px; font-weight: 600; padding: 9px 12px;
   border-radius: 3px; cursor: pointer; text-align: center; letter-spacing: 0.2px;
@@ -269,14 +325,14 @@ canvas#psd-chart { width: 100%; border: 1px solid var(--border); border-radius: 
 
 /* ── RESPONSIVE ── */
 @media (max-width: 800px) {
-  .loc-grid { grid-template-columns: repeat(3, 1fr); }
   .main-grid { grid-template-columns: 1fr; }
   .gravel-grid { grid-template-columns: repeat(3, 1fr); }
   .export-grid { grid-template-columns: repeat(2, 1fr); }
+  .lt-name { max-width: 80px; white-space: normal; }
 }
 @media (max-width: 500px) {
-  .loc-grid { grid-template-columns: repeat(2, 1fr); }
   .pills-row { flex-direction: column; }
+  .lt-name { display: none; }
 }
 </style>
 </head>
@@ -399,55 +455,49 @@ canvas#psd-chart { width: 100%; border: 1px solid var(--border); border-radius: 
     </div>
   </div>
 
-  <!-- LOCATION SELECTOR -->
-  <div class="card">
-    <div class="card-head">
-      <div class="dot"></div> Sample Location
-      <span class="head-right">Select a location to begin recording — data is stored per location · ● = data recorded</span>
+  <!-- LOCATION TABS -->
+  <div class="tab-bar-card">
+    <div class="tab-bar">
+      <button class="loc-tab" data-loc="1" onclick="setLocation(1)">
+        <span class="lt-num">LOC 1</span>
+        <span class="lt-name">Left Flood Plain</span>
+        <span class="lt-count" id="tab-count-1">—</span>
+      </button>
+      <button class="loc-tab" data-loc="2" onclick="setLocation(2)">
+        <span class="lt-num">LOC 2</span>
+        <span class="lt-name">Upstream Channel</span>
+        <span class="lt-count" id="tab-count-2">—</span>
+      </button>
+      <button class="loc-tab" data-loc="3" onclick="setLocation(3)">
+        <span class="lt-num">LOC 3</span>
+        <span class="lt-name">Right Flood Plain</span>
+        <span class="lt-count" id="tab-count-3">—</span>
+      </button>
+      <button class="loc-tab" data-loc="4" onclick="setLocation(4)">
+        <span class="lt-num">LOC 4</span>
+        <span class="lt-name">Right Channel</span>
+        <span class="lt-count" id="tab-count-4">—</span>
+      </button>
+      <button class="loc-tab" data-loc="5" onclick="setLocation(5)">
+        <span class="lt-num">LOC 5</span>
+        <span class="lt-name">Center Channel</span>
+        <span class="lt-count" id="tab-count-5">—</span>
+      </button>
+      <button class="loc-tab" data-loc="6" onclick="setLocation(6)">
+        <span class="lt-num">LOC 6</span>
+        <span class="lt-name">Left Channel</span>
+        <span class="lt-count" id="tab-count-6">—</span>
+      </button>
+      <div class="tab-divider"></div>
+      <button class="sum-tab" id="summary-tab" onclick="showSummaryTab()">∑ Summary</button>
     </div>
-    <div class="card-body">
-      <div class="loc-grid">
-        <div class="loc-card" data-loc="1" onclick="setLocation(1)">
-          <div class="loc-num">LOC 1</div>
-          <div class="loc-name">Left Flood Plain</div>
-          <div class="loc-desc">Approach section — pebble count + vegetation notes</div>
-          <div class="loc-count" id="loc-count-1">0 pebbles</div>
-        </div>
-        <div class="loc-card" data-loc="2" onclick="setLocation(2)">
-          <div class="loc-num">LOC 2</div>
-          <div class="loc-name">Upstream Channel</div>
-          <div class="loc-desc">Riffle upstream of bridge — key for scour type</div>
-          <div class="loc-count" id="loc-count-2">0 pebbles</div>
-        </div>
-        <div class="loc-card" data-loc="3" onclick="setLocation(3)">
-          <div class="loc-num">LOC 3</div>
-          <div class="loc-name">Right Flood Plain</div>
-          <div class="loc-desc">Approach section — pebble count + vegetation notes</div>
-          <div class="loc-count" id="loc-count-3">0 pebbles</div>
-        </div>
-        <div class="loc-card" data-loc="4" onclick="setLocation(4)">
-          <div class="loc-num">LOC 4</div>
-          <div class="loc-name">Right Channel (Bridge)</div>
-          <div class="loc-desc">Bridge section — D50 for clear-water scour</div>
-          <div class="loc-count" id="loc-count-4">0 pebbles</div>
-        </div>
-        <div class="loc-card" data-loc="5" onclick="setLocation(5)">
-          <div class="loc-num">LOC 5</div>
-          <div class="loc-name">Center Channel (Bridge)</div>
-          <div class="loc-desc">Bridge section — main channel bed material</div>
-          <div class="loc-count" id="loc-count-5">0 pebbles</div>
-        </div>
-        <div class="loc-card" data-loc="6" onclick="setLocation(6)">
-          <div class="loc-num">LOC 6</div>
-          <div class="loc-name">Left Channel (Bridge)</div>
-          <div class="loc-desc">Bridge section — D50 for clear-water scour</div>
-          <div class="loc-count" id="loc-count-6">0 pebbles</div>
-        </div>
-      </div>
+    <div class="tab-loc-info" id="tab-loc-info">
+      <span style="color:var(--muted2);font-style:italic">Select a location tab to begin recording</span>
     </div>
   </div>
 
-  <!-- ENTRY + STATS (two-col) -->
+  <!-- LOCATION CONTENT (entry / stats / chart / log) -->
+  <div id="loc-content" style="display:none">
   <div class="main-grid">
 
     <!-- ENTRY -->
@@ -568,20 +618,37 @@ canvas#psd-chart { width: 100%; border: 1px solid var(--border); border-radius: 
 
   <!-- PEBBLE LOG -->
   <div class="card">
-    <div class="card-head"><div class="dot"></div> Pebble Log <span class="head-right">Click a location tab to review its data</span></div>
-    <div class="log-toolbar">
-      <div class="loc-tabs" id="log-tabs">
-        <button class="log-tab active" data-tab="current" onclick="showLogTab('current')">Current Location</button>
-        <button class="log-tab" data-tab="1" onclick="showLogTab(1)">Loc 1</button>
-        <button class="log-tab" data-tab="2" onclick="showLogTab(2)">Loc 2</button>
-        <button class="log-tab" data-tab="3" onclick="showLogTab(3)">Loc 3</button>
-        <button class="log-tab" data-tab="4" onclick="showLogTab(4)">Loc 4</button>
-        <button class="log-tab" data-tab="5" onclick="showLogTab(5)">Loc 5</button>
-        <button class="log-tab" data-tab="6" onclick="showLogTab(6)">Loc 6</button>
-      </div>
-    </div>
+    <div class="card-head"><div class="dot"></div> Pebble Log <span class="head-right" id="log-loc-label">—</span></div>
     <div class="log-list" id="pebble-log">
-      <div class="log-empty">No location selected. Choose a sample location above to begin.</div>
+      <div class="log-empty">No location selected. Choose a sample location tab above to begin.</div>
+    </div>
+  </div><!-- /pebble-log card -->
+
+  </div><!-- /loc-content -->
+
+  <!-- SUMMARY CONTENT (shown when summary tab active) -->
+  <div id="summary-content" style="display:none">
+    <div class="card">
+      <div class="card-head"><div class="dot"></div> Project Summary <span class="head-right">All locations with recorded data</span></div>
+      <div class="card-body">
+        <table class="summary-table" id="summary-table">
+          <thead>
+            <tr>
+              <th>Loc</th>
+              <th>Name</th>
+              <th>n</th>
+              <th>D₅₀ (mm)</th>
+              <th>D₈₄ (mm)</th>
+              <th>D₉₅ (mm)</th>
+              <th>SHA App. 14-B Class</th>
+            </tr>
+          </thead>
+          <tbody id="summary-tbody">
+            <tr class="sum-empty"><td colspan="7">No data recorded yet.</td></tr>
+          </tbody>
+        </table>
+        <div class="sum-note" id="summary-note"></div>
+      </div>
     </div>
   </div>
 
@@ -591,14 +658,16 @@ canvas#psd-chart { width: 100%; border: 1px solid var(--border); border-radius: 
     <div class="card-body">
       <div class="export-grid">
         <button class="btn-export primary" onclick="exportCSV()">Export CSV (Current Loc.)</button>
-        <button class="btn-export primary" onclick="exportSummaryHTML()">Summary Report (HTML)</button>
+        <button class="btn-export primary" onclick="printCurrentLocation()">🖨 Print This Location</button>
+        <button class="btn-export primary" onclick="printAllLocations()">🖨 Print All Locations</button>
         <button class="btn-export json" onclick="saveJSON()">⬇ Save All Data (JSON)</button>
         <button class="btn-export json" onclick="loadJSONPrompt()">⬆ Load Data (JSON)</button>
       </div>
       <div class="export-note">
         <strong>CSV</strong> — raw pebble log for current location. &nbsp;
-        <strong>Summary Report</strong> — printable HTML with D50/D84/D95, material classification, and frequency table for all locations with data. &nbsp;
-        <strong>JSON</strong> — saves or restores the complete session (all six locations + project info) for field continuity across devices or sessions.
+        <strong>Print This Location</strong> — formatted report for the active tab (D50/D84/D95, frequency table, PSD chart). &nbsp;
+        <strong>Print All Locations</strong> — opens a full report with summary table at front, then one section per populated location. &nbsp;
+        <strong>JSON</strong> — saves or restores the complete session for field continuity.
       </div>
       <input type="file" id="json-file-input" accept=".json" style="display:none" onchange="loadJSONFile(event)">
     </div>
@@ -629,24 +698,80 @@ const LOC_NAMES = {
 };
 
 let currentLocation = null;
-let activeLogTab = 'current';
 const TARGET = 100;
 
 // ─── LOCATION SWITCHING ───────────────────────────────────────────────────────
 function setLocation(n) {
   currentLocation = n;
 
-  document.querySelectorAll('.loc-card').forEach(el => el.classList.remove('active'));
-  document.querySelector(`[data-loc="${n}"]`).classList.add('active');
+  // Tab highlighting
+  document.querySelectorAll('.loc-tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('summary-tab').classList.remove('active');
+  const activeTab = document.querySelector(`.loc-tab[data-loc="${n}"]`);
+  if (activeTab) activeTab.classList.add('active');
 
+  // Show location content, hide summary
+  document.getElementById('loc-content').style.display = '';
+  document.getElementById('summary-content').style.display = 'none';
+
+  // Info strip
+  const infoEl = document.getElementById('tab-loc-info');
+  infoEl.innerHTML = `<span class="loc-badge">LOC ${n}</span><span class="loc-full-name">${LOC_NAMES[n]}</span>`;
+
+  // Entry / stats labels
   const locName = `Loc ${n} — ${LOC_NAMES[n]}`;
   document.getElementById('entry-loc-label').textContent = locName;
   document.getElementById('stats-loc-label').textContent = locName;
   document.getElementById('chart-loc-label').textContent = locName;
+  document.getElementById('log-loc-label').textContent = locName;
 
-  // Switch log tab to current
-  showLogTab('current');
   updateAll();
+  document.getElementById('pebble-input').focus();
+}
+
+function showSummaryTab() {
+  currentLocation = null;
+  document.querySelectorAll('.loc-tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('summary-tab').classList.add('active');
+  document.getElementById('loc-content').style.display = 'none';
+  document.getElementById('summary-content').style.display = '';
+  document.getElementById('tab-loc-info').innerHTML =
+    '<span style="color:var(--muted2);font-style:italic">Summary of all recorded locations</span>';
+  renderSummaryTab();
+}
+
+function renderSummaryTab() {
+  const tbody = document.getElementById('summary-tbody');
+  const noteEl = document.getElementById('summary-note');
+  const activeLocs = [1,2,3,4,5,6].filter(i => locationData[i].pebbles.length > 0);
+
+  if (!activeLocs.length) {
+    tbody.innerHTML = '<tr class="sum-empty"><td colspan="7">No data recorded yet. Record pebbles in one or more location tabs to see results here.</td></tr>';
+    noteEl.textContent = '';
+    return;
+  }
+
+  tbody.innerHTML = activeLocs.map(i => {
+    const p = locationData[i].pebbles;
+    const s = [...p].sort((a,b)=>a-b);
+    const d50 = percentile(s,50), d84 = percentile(s,84), d95 = percentile(s,95);
+    const cls = shaClass(d50);
+    const nOk = p.length >= 100;
+    return `<tr>
+      <td><span class="sum-loc-num">LOC ${i}</span></td>
+      <td><span class="sum-loc-name">${LOC_NAMES[i]}</span></td>
+      <td><span class="sum-count ${nOk ? 'ok' : ''}">${p.length}${nOk ? '' : ' ⚠'}</span></td>
+      <td><span class="sum-val">${fmtMM(d50)}</span></td>
+      <td><span class="sum-val">${fmtMM(d84)}</span></td>
+      <td><span class="sum-val">${fmtMM(d95)}</span></td>
+      <td><span class="sum-class">${cls ? cls[0] : '—'}</span></td>
+    </tr>`;
+  }).join('');
+
+  const incomplete = activeLocs.filter(i => locationData[i].pebbles.length < 100);
+  noteEl.textContent = incomplete.length
+    ? `⚠ Loc ${incomplete.join(', ')} ha${incomplete.length===1?'s':'ve'} fewer than 100 pebbles — D-values may not be representative. ≥100 particles per location recommended (Wolman 1954).`
+    : `All recorded locations meet the ≥100 particle minimum. D50 values are suitable for use in ABSCOUR 9 clear-water scour analysis.`;
 }
 
 // ─── WOLMAN CLASS ─────────────────────────────────────────────────────────────
@@ -784,27 +909,20 @@ function updateAll() {
     }
   });
 
-  // Location cards — count badges + data indicator
+  // Tab bar count badges
   for (let i = 1; i <= 6; i++) {
     const cnt = locationData[i].pebbles.length;
-    const el = document.getElementById(`loc-count-${i}`);
-    el.textContent = cnt ? `${cnt} pebble${cnt !== 1 ? 's' : ''}` : '0 pebbles';
-    el.className = 'loc-count' + (cnt ? ' filled' : '');
-    const card = document.querySelector(`[data-loc="${i}"]`);
-    if (cnt > 0) card.classList.add('has-data'); else card.classList.remove('has-data');
+    const el = document.getElementById(`tab-count-${i}`);
+    if (el) {
+      el.textContent = cnt ? `${cnt} pebble${cnt !== 1 ? 's' : ''}` : '—';
+      el.className = 'lt-count' + (cnt ? ' filled' : '');
+    }
   }
 
-  // Log tabs — mark which have data
-  document.querySelectorAll('.log-tab[data-tab]').forEach(btn => {
-    const t = btn.dataset.tab;
-    if (t !== 'current' && parseInt(t)) {
-      const cnt = locationData[parseInt(t)].pebbles.length;
-      if (cnt > 0) btn.classList.add('has-data'); else btn.classList.remove('has-data');
-      btn.textContent = cnt ? `Loc ${t} (${cnt})` : `Loc ${t}`;
-    }
-  });
+  // If summary tab is open, keep it up to date
+  if (document.getElementById('summary-content').style.display !== 'none') renderSummaryTab();
 
-  // Log list
+  // Log
   renderLog();
 
   // Chart
@@ -812,23 +930,9 @@ function updateAll() {
 }
 
 // ─── LOG ──────────────────────────────────────────────────────────────────────
-function showLogTab(tab) {
-  activeLogTab = tab;
-  document.querySelectorAll('.log-tab').forEach(b => b.classList.remove('active'));
-  const el = document.querySelector(`.log-tab[data-tab="${tab}"]`);
-  if (el) el.classList.add('active');
-  renderLog();
-}
-
 function renderLog() {
   const logEl = document.getElementById('pebble-log');
-  let pebbles;
-
-  if (activeLogTab === 'current') {
-    pebbles = currentLocation ? locationData[currentLocation].pebbles : [];
-  } else {
-    pebbles = locationData[parseInt(activeLogTab)]?.pebbles || [];
-  }
+  const pebbles = currentLocation ? locationData[currentLocation].pebbles : [];
 
   if (!pebbles.length) {
     logEl.innerHTML = '<div class="log-empty">No pebbles recorded for this location.</div>';
@@ -992,14 +1096,43 @@ function exportCSV() {
   download(csv, `pebble_loc${currentLocation}_${proj.date}.csv`, 'text/csv');
 }
 
-function exportSummaryHTML() {
-  const proj = getProject();
+function printCurrentLocation() {
+  if (!currentLocation) { showToast('Select a location tab first'); return; }
+  const p = locationData[currentLocation].pebbles;
+  if (!p.length) { showToast('No data for this location'); return; }
+  const html = buildReportHTML([currentLocation]);
+  openPrintWindow(html);
+}
+
+function printAllLocations() {
   const activeLocs = [1,2,3,4,5,6].filter(i => locationData[i].pebbles.length > 0);
   if (!activeLocs.length) { showToast('No data recorded yet'); return; }
+  const html = buildReportHTML(activeLocs, true);
+  openPrintWindow(html);
+}
 
-  // Build per-location data blob for embedding in output HTML
+function openPrintWindow(html) {
+  const w = window.open('', '_blank', 'width=1000,height=800');
+  w.document.write(html);
+  w.document.close();
+  w.onload = () => { w.focus(); w.print(); };
+}
+
+function exportSummaryHTML() {
+  // Keep for backward compatibility — same as Print All but downloads
+  const activeLocs = [1,2,3,4,5,6].filter(i => locationData[i].pebbles.length > 0);
+  if (!activeLocs.length) { showToast('No data recorded yet'); return; }
+  const proj = getProject();
+  const html = buildReportHTML(activeLocs, true);
+  download(html, `pebble_summary_${proj.date}.html`, 'text/html');
+}
+
+function buildReportHTML(locs, includeSummary = false) {
+  const proj = getProject();
+
+  // Build per-location data
   const embedData = {};
-  activeLocs.forEach(i => {
+  locs.forEach(i => {
     const p = locationData[i].pebbles;
     const sorted = [...p].sort((a,b) => a-b);
     const d50 = percentile(sorted,50), d84 = percentile(sorted,84), d95 = percentile(sorted,95);
@@ -1009,18 +1142,46 @@ function exportSummaryHTML() {
     embedData[i] = { sorted, d50, d84, d95, cls, classCounts, n: p.length };
   });
 
-  // Build HTML sections (stats table + canvas placeholder + freq table)
-  const locSections = activeLocs.map(i => {
+  // Summary table (only for all-locations print)
+  let summarySection = '';
+  if (includeSummary && locs.length > 1) {
+    const rows = locs.map(i => {
+      const { d50, d84, d95, cls, n } = embedData[i];
+      return `<tr>
+        <td style="font-family:monospace;font-weight:700;color:#1d5fa8">LOC ${i}</td>
+        <td>${LOC_NAMES[i]}</td>
+        <td style="font-family:monospace;font-weight:${n>=100?'700':'400'};color:${n>=100?'#15803d':'#991b1b'}">${n}${n<100?' ⚠':''}</td>
+        <td style="font-family:monospace;font-weight:700">${fmtMM(d50)}</td>
+        <td style="font-family:monospace">${fmtMM(d84)}</td>
+        <td style="font-family:monospace">${fmtMM(d95)}</td>
+        <td>${cls ? cls[0] : '—'}</td>
+      </tr>`;
+    }).join('');
+    summarySection = `
+<div class="sum-section">
+  <div class="sum-head">Project Summary</div>
+  <table>
+    <thead><tr><th>Loc</th><th>Name</th><th>n</th><th>D₅₀ (mm)</th><th>D₈₄ (mm)</th><th>D₉₅ (mm)</th><th>SHA App. 14-B Class</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div class="note" style="margin-top:8px">
+    D50 (bridge section, Locs 4–6) used in ABSCOUR 9 clear-water scour equations.
+    Upstream riffle (Loc 2) informs live-bed vs. clear-water scour determination.
+    ⚠ indicates locations with &lt; 100 particles — results may not be representative.
+  </div>
+</div>`;
+  }
+
+  // Per-location sections
+  const locSections = locs.map(i => {
     const { d50, d84, d95, cls, classCounts, n } = embedData[i];
     const freqRows = Object.entries(classCounts)
       .sort((a,b) => b[1]-a[1])
       .map(([c,ct]) => `<tr><td>${c}</td><td>${ct}</td><td>${(ct/n*100).toFixed(1)}%</td></tr>`)
       .join('');
-
     return `
 <div class="loc-section">
   <div class="loc-head">Location ${i} &mdash; ${LOC_NAMES[i]} &nbsp;<span class="loc-n">n = ${n}</span></div>
-
   <div class="two-col">
     <div>
       <div class="sub-head">Grain Size Statistics</div>
@@ -1034,7 +1195,6 @@ function exportSummaryHTML() {
       </table>
       ${cls ? `<div class="note">${cls[1]}</div>` : ''}
     </div>
-
     <div>
       <div class="sub-head">Frequency by Wolman Class</div>
       <table>
@@ -1043,7 +1203,6 @@ function exportSummaryHTML() {
       </table>
     </div>
   </div>
-
   <div style="margin-top:16px">
     <div class="sub-head">Particle Size Distribution</div>
     <canvas id="chart-${i}" class="psd-canvas" width="900" height="300"></canvas>
@@ -1056,12 +1215,9 @@ function exportSummaryHTML() {
 </div>`;
   }).join('');
 
-  // Self-contained chart drawing script embedded in output HTML
   const chartScript = `
 (function() {
   var DATA = ${JSON.stringify(embedData)};
-  var LOC_NAMES = ${JSON.stringify(LOC_NAMES)};
-
   function pct(sorted, p) {
     if (!sorted.length) return null;
     var idx = (p/100)*(sorted.length-1), lo = Math.floor(idx), hi = Math.ceil(idx);
@@ -1071,7 +1227,6 @@ function exportSummaryHTML() {
     if (v===null) return '—';
     return v<10 ? v.toFixed(2) : v<100 ? v.toFixed(1) : Math.round(v)+'';
   }
-
   function drawChart(canvasId, sorted, d50, d84, d95) {
     var canvas = document.getElementById(canvasId);
     if (!canvas) return;
@@ -1079,15 +1234,11 @@ function exportSummaryHTML() {
     var W = canvas.width, H = canvas.height;
     var PAD = {top:24, right:32, bottom:56, left:56};
     var cW = W-PAD.left-PAD.right, cH = H-PAD.top-PAD.bottom;
-
     ctx.clearRect(0,0,W,H);
     ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
-
     var logMin=Math.log10(0.5), logMax=Math.log10(5000);
     function xS(v){ return PAD.left+(Math.log10(Math.max(v,0.51))-logMin)/(logMax-logMin)*cW; }
     function yS(p){ return PAD.top+(1-p/100)*cH; }
-
-    // Grid
     ctx.strokeStyle='#e4ecf4'; ctx.lineWidth=1;
     [1,2,4,8,16,32,64,128,256,512,1024,2048].forEach(function(v){
       var x=xS(v); ctx.beginPath(); ctx.moveTo(x,PAD.top); ctx.lineTo(x,PAD.top+cH); ctx.stroke();
@@ -1095,8 +1246,6 @@ function exportSummaryHTML() {
     [0,10,20,30,40,50,60,70,80,90,100].forEach(function(p){
       var y=yS(p); ctx.beginPath(); ctx.moveTo(PAD.left,y); ctx.lineTo(PAD.left+cW,y); ctx.stroke();
     });
-
-    // Class dividers
     var divs=[{v:2,lbl:'Sand'},{v:64,lbl:'Gravel'},{v:256,lbl:'Cobble'},{v:4096,lbl:'Boulder'}];
     ctx.strokeStyle='#c8d6e5'; ctx.lineWidth=1; ctx.setLineDash([3,4]);
     ctx.font="10px 'Segoe UI',sans-serif"; ctx.fillStyle='#8ba3bb';
@@ -1108,55 +1257,31 @@ function exportSummaryHTML() {
       }
     });
     ctx.setLineDash([]);
-
-    // Axes
     ctx.strokeStyle='#1a2b3c'; ctx.lineWidth=1.5;
     ctx.beginPath();
     ctx.moveTo(PAD.left,PAD.top); ctx.lineTo(PAD.left,PAD.top+cH);
     ctx.lineTo(PAD.left+cW,PAD.top+cH); ctx.stroke();
-
-    // X-axis labels
     ctx.fillStyle='#5a738a'; ctx.font="10px 'Segoe UI',sans-serif";
     [1,2,4,8,16,32,64,128,256,512,1024].forEach(function(v){
       ctx.textAlign='center';
       ctx.fillText(v>=1000?(v/1000)+'k':v, xS(v), PAD.top+cH+15);
     });
-
-    // Y-axis labels
     ctx.textAlign='right';
-    [0,25,50,75,100].forEach(function(p){
-      ctx.fillText(p+'%', PAD.left-7, yS(p)+4);
-    });
-
-    // Axis titles
-    ctx.fillStyle='#5a738a'; ctx.font="10px 'Segoe UI',sans-serif";
-    ctx.textAlign='center';
+    [0,25,50,75,100].forEach(function(p){ ctx.fillText(p+'%', PAD.left-7, yS(p)+4); });
+    ctx.fillStyle='#5a738a'; ctx.font="10px 'Segoe UI',sans-serif"; ctx.textAlign='center';
     ctx.fillText('Particle Size (mm)', PAD.left+cW/2, H-8);
     ctx.save(); ctx.translate(14,PAD.top+cH/2); ctx.rotate(-Math.PI/2);
     ctx.fillText('Cumulative % Finer Than', 0, 0); ctx.restore();
-
     if (!sorted || sorted.length < 2) return;
-
-    // CDF curve — filled area first
     ctx.beginPath();
-    sorted.forEach(function(v,i){
-      var x=xS(v), y=yS((i+1)/sorted.length*100);
-      i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
-    });
+    sorted.forEach(function(v,i){ var x=xS(v), y=yS((i+1)/sorted.length*100); i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
     ctx.lineTo(xS(sorted[sorted.length-1]), PAD.top+cH);
     ctx.lineTo(xS(sorted[0]), PAD.top+cH);
     ctx.closePath();
     ctx.fillStyle='rgba(29,95,168,0.07)'; ctx.fill();
-
-    // CDF curve line
     ctx.beginPath();
-    sorted.forEach(function(v,i){
-      var x=xS(v), y=yS((i+1)/sorted.length*100);
-      i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
-    });
+    sorted.forEach(function(v,i){ var x=xS(v), y=yS((i+1)/sorted.length*100); i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
     ctx.strokeStyle='#0c1f35'; ctx.lineWidth=2.5; ctx.lineJoin='round'; ctx.stroke();
-
-    // D-line markers
     [[d50,'D50',50,'#1d5fa8'],[d84,'D84',84,'#166534'],[d95,'D95',95,'#d97706']].forEach(function(arr){
       var d=arr[0], lbl=arr[1], perc=arr[2], color=arr[3];
       if(d===null) return;
@@ -1167,26 +1292,20 @@ function exportSummaryHTML() {
       ctx.setLineDash([]);
       ctx.fillStyle=color;
       ctx.beginPath(); ctx.arc(x,y,5,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#fff';
-      ctx.beginPath(); ctx.arc(x,y,2.5,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(x,y,2.5,0,Math.PI*2); ctx.fill();
       ctx.fillStyle=color;
       ctx.font='bold 10px \\'Segoe UI\\',sans-serif'; ctx.textAlign='left';
-      var labelX = x+7, labelY = y-5;
-      if (labelX + 60 > PAD.left+cW) labelX = x-62;
+      var labelX=x+7, labelY=y-5;
+      if(labelX+60>PAD.left+cW) labelX=x-62;
       ctx.fillText(lbl+'='+fmt(d)+'mm', labelX, labelY);
     });
   }
-
   document.addEventListener('DOMContentLoaded', function(){
-    Object.keys(DATA).forEach(function(i){
-      var d = DATA[i];
-      drawChart('chart-'+i, d.sorted, d.d50, d.d84, d.d95);
-    });
+    Object.keys(DATA).forEach(function(i){ var d=DATA[i]; drawChart('chart-'+i, d.sorted, d.d50, d.d84, d.d95); });
   });
-})();
-`;
+})();`;
 
-  const html = `<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -1196,52 +1315,30 @@ function exportSummaryHTML() {
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; color: #1a2b3c; background: #f0f4f8; }
   .page { max-width: 960px; margin: 0 auto; padding: 32px 28px 60px; background: #fff; }
-
-  /* Header */
   .rpt-header { border-bottom: 3px solid #2471c9; padding-bottom: 12px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: flex-end; }
   .rpt-title { font-size: 18px; font-weight: 700; color: #0c1f35; }
   .rpt-title span { color: #2471c9; }
   .rpt-meta { font-size: 10px; color: #8ba3bb; font-family: 'Courier New', monospace; text-align: right; line-height: 1.6; }
-
-  /* Project table */
   .proj-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12px; }
   .proj-table td { padding: 5px 10px; border: 1px solid #d8e4ee; }
   .proj-table td:nth-child(odd) { font-weight: 600; background: #f4f8fc; color: #5a738a; width: 14%; white-space: nowrap; }
-
-  /* Location sections */
+  .sum-section { margin-bottom: 28px; }
+  .sum-head { background: #0c1f35; color: #fff; padding: 7px 14px; font-size: 12px; font-weight: 700; letter-spacing: 0.4px; margin-bottom: 10px; }
   .loc-section { margin-bottom: 32px; page-break-inside: avoid; }
-  .loc-head {
-    background: #152d4a; color: #fff; padding: 8px 14px;
-    font-size: 12px; font-weight: 700; letter-spacing: 0.4px; margin-bottom: 12px;
-    display: flex; align-items: center; gap: 10px;
-  }
+  .loc-head { background: #152d4a; color: #fff; padding: 8px 14px; font-size: 12px; font-weight: 700; letter-spacing: 0.4px; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
   .loc-n { font-weight: 400; color: #7a9fc0; font-size: 11px; }
-
-  /* Two-col layout */
   .two-col { display: grid; grid-template-columns: 1fr 1.3fr; gap: 20px; align-items: start; }
-  .chart-col { }
-
-  /* Sub-headings */
   .sub-head { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #5a738a; margin-bottom: 6px; }
-
-  /* Tables */
   table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 11.5px; }
   th { background: #dce8f4; color: #0c1f35; padding: 5px 8px; text-align: left; border: 1px solid #c8d6e5; font-size: 10.5px; font-weight: 700; }
   td { padding: 4px 8px; border: 1px solid #d8e4ee; }
   tr.d50-row td { background: #eaf4ff; }
-
-  /* Note box */
   .note { font-size: 11px; color: #5a738a; background: #f4f8fc; border-left: 3px solid #4a7daa; padding: 7px 10px; margin: 6px 0 0; line-height: 1.55; }
-
-  /* Canvas */
   .psd-canvas { display: block; width: 100%; border: 1px solid #c8d6e5; background: #fff; border-radius: 2px; }
   .chart-legend { display: flex; gap: 16px; margin-top: 6px; font-size: 10px; color: #5a738a; }
   .leg { display: flex; align-items: center; gap: 4px; }
   .leg.d50 { color: #1d5fa8; } .leg.d84 { color: #166534; } .leg.d95 { color: #d97706; }
-
-  /* Footer */
   .rpt-footer { font-size: 10px; color: #8ba3bb; margin-top: 28px; border-top: 1px solid #c8d6e5; padding-top: 10px; line-height: 1.7; }
-
   @media print {
     body { background: #fff; }
     .page { padding: 16px; max-width: 100%; }
@@ -1252,7 +1349,6 @@ function exportSummaryHTML() {
 </head>
 <body>
 <div class="page">
-
   <div class="rpt-header">
     <div>
       <div class="rpt-title">Wolman Pebble Count <span>/ Field Summary</span></div>
@@ -1264,7 +1360,6 @@ function exportSummaryHTML() {
       Wolman (1954) / SHA App. 14-B
     </div>
   </div>
-
   <table class="proj-table">
     <tbody>
       <tr><td>Project</td><td>${proj.name}</td><td>Structure No.</td><td>${proj.struct||'—'}</td></tr>
@@ -1272,9 +1367,8 @@ function exportSummaryHTML() {
       <tr><td>Conditions</td><td>${proj.conditions||'—'}</td><td>Notes</td><td>${proj.notes||'—'}</td></tr>
     </tbody>
   </table>
-
+  ${summarySection}
   ${locSections}
-
   <div class="rpt-footer">
     <b>Method:</b> Wolman (1954) step-toe pebble count procedure — intermediate (b) axis measured via gravelometer, ≥100 particles per location.
     Sample locations per Maryland SHA Geotechnical Manual, Appendix 14-B (Fig. 14B-1).
@@ -1286,8 +1380,6 @@ function exportSummaryHTML() {
 <script>${chartScript}<\/script>
 </body>
 </html>`;
-
-  download(html, `pebble_summary_${proj.date}.html`, 'text/html');
 }
 
 // ─── JSON SAVE / LOAD ────────────────────────────────────────────────────────
@@ -1363,13 +1455,17 @@ function showToast(msg) {
 
 // ─── INIT ────────────────────────────────────────────────────────────────────
 document.getElementById('proj-date').value = new Date().toISOString().slice(0,10);
-document.getElementById('pebble-input').focus();
 window.addEventListener('resize', () => {
-  const p = currentLocation ? locationData[currentLocation].pebbles : [];
+  if (!currentLocation) return;
+  const p = locationData[currentLocation].pebbles;
   const s = [...p].sort((a,b)=>a-b);
   drawChart(s, percentile(s,50), percentile(s,84), percentile(s,95));
 });
-updateAll();
+// Initialize tab badges
+for (let i = 1; i <= 6; i++) {
+  const el = document.getElementById(`tab-count-${i}`);
+  if (el) el.textContent = '—';
+}
 </script>
 </body>
 </html>
